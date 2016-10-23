@@ -1,0 +1,29 @@
+{
+  "name": "lets-paginate",
+  "version": "1.0.0",
+  "description": "Set of tools that makes react/redux pagination easy",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarekLabuz/lets-paginate.git"
+  },
+  "keywords": [
+    "redux",
+    "pagination",
+    "middleware",
+    "react",
+    "list",
+    "paging",
+    "page",
+    "paginate"
+  ],
+  "author": "Marek Łabuz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MarekLabuz/lets-paginate/issues"
+  },
+  "homepage": "https://github.com/MarekLabuz/lets-paginate#readme"
+}
