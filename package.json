@@ -21,7 +21,7 @@
     "paginate"
   ],
   "author": "Marek Łabuz",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/MarekLabuz/lets-paginate/issues"
   },
