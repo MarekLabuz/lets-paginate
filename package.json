@@ -4,7 +4,8 @@
   "description": "Set of tools that makes react/redux pagination easy",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon --exec babel-node -- index.js"
   },
   "repository": {
     "type": "git",
@@ -25,5 +26,17 @@
   "bugs": {
     "url": "https://github.com/MarekLabuz/lets-paginate/issues"
   },
-  "homepage": "https://github.com/MarekLabuz/lets-paginate#readme"
+  "homepage": "https://github.com/MarekLabuz/lets-paginate#readme",
+  "dependencies": {
+    "lodash": "^4.16.4",
+    "react": "^15.3.2"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.16.0",
+    "babel-core": "^6.17.0",
+    "babel-plugin-transform-object-rest-spread": "^6.16.0",
+    "babel-preset-es2015": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
+    "nodemon": "^1.11.0"
+  }
 }
