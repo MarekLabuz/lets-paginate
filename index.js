@@ -2,8 +2,6 @@ import _ from 'lodash'
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 
-// --------------------ACTIONS----------------------
-
 const FETCH_DATA = 'lets-paginate/FETCH_DATA'
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
@@ -32,9 +30,7 @@ function setCachedData (name, cachedData) {
 const initialState = {
   page: 1,
   entries: 25,
-  cachedData: {
-    users: {}
-  }
+  cachedData: {}
 }
 
 export function reducer (state = initialState, action) {
@@ -62,15 +58,13 @@ export function reducer (state = initialState, action) {
 
 // ---------------------OTHER-----------------------
 
-const entriesRange = [10, 25, 50]
-
 const gcd = (a, b) => !b ? a : gcd(b, a % b)
 
 const calcStep = ([first = 5, second, ...entriesRange]) => !entriesRange.length
   ? gcd(first, second)
   : calcStep([gcd(first, second), ...entriesRange])
 
-export const paginate = (name, fetch, page, entries, entriesRange, dispatch, cachedData) => {
+export const paginate = (name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode) => {
   dispatch(setPagination({ page, entries }))
   const step = calcStep(entriesRange)
   const start = (page - 1) * entries
@@ -80,47 +74,51 @@ export const paginate = (name, fetch, page, entries, entriesRange, dispatch, cac
     const dataOptional = cachedData[`[${start + (curr * step)}, ${start + (curr * step) + step}]`]
     return [
       ...acc,
-      ...(dataOptional || [])
+      dataOptional
     ]
-  }, [])
+  }, []).filter(item => !!item)
 
-  return data.length < entries
+  return data.length < (entries / step)
     ?
       fetch()
         .then(response => {
+          const { data } = responseAccess ? responseAccess(response) : response
           const cachedData = {
             ...cachedData,
-            ..._.chunk(response.data, step).reduce((acc, curr, index) => ({
+            ..._.chunk(data, step).reduce((acc, curr, index) => ({
               ...acc,
-              [`[${start + (index * step)}, ${start + (index * step) + step}]`]: curr
+              [`[${start + (index * step)}, ${start + (index * step) + step}]`]: encode ? encode(curr) : curr
             }), [])
           }
           dispatch(setCachedData(name, cachedData))
-          return response
+          return {
+            data: encode ? encode(data) : data,
+            response,
+          }
         }, error => {
           throw new Error(error)
         })
     :
-      Promise.resolve({ data })
+      Promise.resolve({ data: decode ? decode(data) : _.flatten(data) })
 }
 
 const mapStateToPropsCreator = ({ name }, mapStateToProps) => (state, props) => {
   return {
-    cachedData: state.pagination.cachedData[name],
+    cachedData: state.pagination.cachedData[name] || {},
     page: state.pagination.page,
     entries: state.pagination.entries,
     ...mapStateToProps(state, props)
   }
 }
 
-const mapDispatchToPropsCreator = ({ name, action }) => (dispatch, { defaultEntries, defaultPage }) => {
+const mapDispatchToPropsCreator = ({ name, entriesRange, action, responseAccess, encode, decode }) => (dispatch, { defaultEntries, defaultPage }) => {
   const promise = ({ page, entries, entriesRange, cachedData }) => (fetch = Promise.resolve({ data: [] })) =>
-    paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData)
+    paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode)
 
   return {
     reset: () => console.log(`reset ${defaultEntries} ${defaultPage}`),
-    onPageChange: (cachedData, statePage, stateEntries) => ({ page, entries }) =>
-      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, statePage, cachedData })))
+    onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries }) =>
+      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData })))
   }
 }
 
@@ -133,9 +131,9 @@ const mergeProps = ({cachedData, page, entries, ...restStateProps }, { onPageCha
   ...restDispatchProps
 })
 
-export const reduxPagination = ({ name, action }, mapStateToProps) => (Comp) =>
+export const reduxPagination = ({ name, entriesRange, responseAccess, encode, decode, action }, mapStateToProps) => (Comp) =>
   connect(
     mapStateToPropsCreator({ name }, mapStateToProps),
-    mapDispatchToPropsCreator({ name, action }),
+    mapDispatchToPropsCreator({ name, entriesRange, action, responseAccess, encode, decode }),
     mergeProps
   )(Comp)
