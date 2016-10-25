@@ -64,7 +64,18 @@ const calcStep = ([first = 5, second, ...entriesRange]) => !entriesRange.length
   ? gcd(first, second)
   : calcStep([gcd(first, second), ...entriesRange])
 
-export const paginate = (name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode) => {
+export const paginate = (
+  name,
+  fetch,
+  page,
+  entries,
+  entriesRange,
+  dispatch,
+  cachedData,
+  responseAccess,
+  encode,
+  decode
+) => {
   dispatch(setPagination({ page, entries }))
   const step = calcStep(entriesRange)
   const start = (page - 1) * entries
@@ -111,7 +122,14 @@ const mapStateToPropsCreator = ({ name }, mapStateToProps) => (state, props) => 
   }
 }
 
-const mapDispatchToPropsCreator = ({ name, entriesRange, action, responseAccess, encode, decode }) => (dispatch, { defaultEntries, defaultPage }) => {
+const mapDispatchToPropsCreator = ({
+  name,
+  entriesRange,
+  action,
+  responseAccess,
+  encode,
+  decode
+}) => (dispatch, { defaultEntries, defaultPage }) => {
   const promise = ({ page, entries, entriesRange, cachedData }) => (fetch = Promise.resolve({ data: [] })) =>
     paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode)
 
@@ -122,7 +140,11 @@ const mapDispatchToPropsCreator = ({ name, entriesRange, action, responseAccess,
   }
 }
 
-const mergeProps = ({cachedData, page, entries, ...restStateProps }, { onPageChange, ...restDispatchProps }, ownProps) => ({
+const mergeProps = (
+  { cachedData, page, entries, ...restStateProps },
+  { onPageChange, ...restDispatchProps},
+  ownProps
+) => ({
   ...ownProps,
   page,
   entries,
@@ -131,7 +153,9 @@ const mergeProps = ({cachedData, page, entries, ...restStateProps }, { onPageCha
   ...restDispatchProps
 })
 
-export const reduxPagination = ({ name, entriesRange, responseAccess, encode, decode, action }, mapStateToProps) => (Comp) =>
+export const reduxPagination = ({
+  name, entriesRange, responseAccess, encode, decode, action }, mapStateToProps
+) => (Comp) =>
   connect(
     mapStateToPropsCreator({ name }, mapStateToProps),
     mapDispatchToPropsCreator({ name, entriesRange, action, responseAccess, encode, decode }),
