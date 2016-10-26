@@ -1,12 +1,24 @@
 import _ from 'lodash'
-import React, { Component } from 'react'
+import React from 'react'
 import { connect } from 'react-redux'
 
-const FETCH_DATA = 'lets-paginate/FETCH_DATA'
+const initialState = {
+  page: 1,
+  entries: 25,
+  cachedData: {}
+}
+
+const gcd = (a, b) => !b ? a : gcd(b, a % b)
+
+const calcStep = ([first = 5, second, ...entriesRange]) => !entriesRange.length
+  ? gcd(first, second)
+  : calcStep([gcd(first, second), ...entriesRange])
+
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
+const RESET_CACHED_DATA = 'lets-paginate/RESET_CACHED_DATA'
 
-function setPagination (pagination) {
+export function setPagination (pagination) {
   return {
     type: SET_PAGINATION,
     payload: {
@@ -25,12 +37,13 @@ function setCachedData (name, cachedData) {
   }
 }
 
-// --------------------REDUCER----------------------
-
-const initialState = {
-  page: 1,
-  entries: 25,
-  cachedData: {}
+export function resetCachedData (name) {
+  return {
+    type: RESET_CACHED_DATA,
+    payload: {
+      name
+    }
+  }
 }
 
 export function reducer (state = initialState, action) {
@@ -51,20 +64,24 @@ export function reducer (state = initialState, action) {
           }
         }
       }
+    case RESET_CACHED_DATA:
+      return {
+        ...state,
+        cachedData: {
+          ...state.cachedData,
+          ...(
+            state.cachedData[action.payload.name]
+              ? { [action.payload.name]: {} }
+              : {}
+          )
+        }
+      }
     default:
       return state
   }
 }
 
-// ---------------------OTHER-----------------------
-
-const gcd = (a, b) => !b ? a : gcd(b, a % b)
-
-const calcStep = ([first = 5, second, ...entriesRange]) => !entriesRange.length
-  ? gcd(first, second)
-  : calcStep([gcd(first, second), ...entriesRange])
-
-export const paginate = (
+const paginate = (
   name,
   fetch,
   page,
@@ -129,12 +146,12 @@ const mapDispatchToPropsCreator = ({
   responseAccess,
   encode,
   decode
-}) => (dispatch, { defaultEntries, defaultPage }) => {
+}) => (dispatch) => {
   const promise = ({ page, entries, entriesRange, cachedData }) => (fetch = Promise.resolve({ data: [] })) =>
     paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode)
 
   return {
-    reset: () => console.log(`reset ${defaultEntries} ${defaultPage}`),
+    dispatch,
     onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries }) =>
       dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData })))
   }
