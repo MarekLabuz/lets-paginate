@@ -143,7 +143,7 @@ var mapStateToPropsCreator = function mapStateToPropsCreator(_ref5, mapStateToPr
       cachedData: state.pagination.cachedData[name] || {},
       page: state.pagination.page,
       entries: state.pagination.entries
-    }, mapStateToProps(state, props));
+    }, mapStateToProps ? mapStateToProps(state, props) : {});
   };
 };
 
@@ -175,7 +175,7 @@ var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6, mapDis
           return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData })));
         };
       }
-    }, mapDispatchTopProps(dispatch, props));
+    }, mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {});
   };
 };
 
