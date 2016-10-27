@@ -7,8 +7,7 @@ It provides a set of tools so that you wouldn't bother about paginating and cach
 It just stores your cached data in a redux store in small chunks, so it can be easily accessed later.
 
 **How can I make it work?**
-You need to import a recuder included in a package and add it to your main reducer:
-
+You need to import a reducer included in a package and add it to your main reducer:
 
 ```js
 import { reducer } from 'lets-paginate'
@@ -68,7 +67,7 @@ I've wrote ```({ data: response.data.array })``` just as an example
 
 Well, actually, that's it :) However if you are curious, there is always something more
 
-**Do you support some fancy data transformations?** I do! :) 
+**Do you support some fancy data transformations?** I do! :)
 There are two more functions you can add.
 ```js
 reduxPagination({
@@ -77,4 +76,23 @@ reduxPagination({
     decode: array => { /* ... */ }
 }, mapStateToProps, mapDispatchToProps)(UsersList)
 ```
-TBD
+- ```encode``` is a function that takes a ```chunk``` which can be a data (array of items or its part) that is being returned from your source. It simply tells that you want to store your data in the other way than a simple array of items.
+- ```decode``` is a function that takes an array which is an array of items that ```encode``` returned. Here you can convert it into something more accessible. The result will be passed to a ```response``` as a ```data```.
+
+Oh, that sounds complicated, but it is not :) Here's an example:
+
+```js
+const encode = chunk => chunk.reduce((acc, curr) => ({
+    ids: [...acc.ids, curr.id],
+    data: { ...acc.data, [curr.id]: curr }
+  }), { ids: [], data: {} })
+
+const decode = array => array.reduce((acc, curr) => ({
+    ids: [...acc.ids, ...curr.ids],
+    data: { ...acc.data, ...curr.data }
+  }), { ids: [], data: {} })
+```
+
+
+# License
+MIT
