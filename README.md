@@ -39,6 +39,11 @@ reduxPagination({
 - ```action``` is a function, but we will get back to it later
 - ```mapStateToProps``` and ```mapDispatchToProps``` are functions as you would normally pass to a react-redux ```connect```
 
+A few new props are passed to your React component:
+- ```page``` as a number of a current page
+- ```entries``` as a number of items displayed on a single page
+- ```onPageChange({ page, entries })``` is a function that takes new ```page``` and ```entries```, so if you want to change a page to 5th just execute ```onPageChange({ page: 5 })```. Changing number of ```entries``` works the same way. **Apart from setting pagination, this function also fetches data** so if you just want to change a pagination, ```dispatch(setPagination({ page, entries })``` is your way to go. ```setPagination``` can be imported from a module. **Please keep in mind that variables ```page``` and ```entries``` are shared between your lists, so you need to reset or initialize them yourself.**
+
 ```action``` from above is a function that takes a function which returs promise as an argument, let me explain it to you :)
 
 Example:
