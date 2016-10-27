@@ -72,7 +72,7 @@ reduxPagination({
 
 I've wrote ```({ data: response.data.array })``` just as an example
 
-If you want to reset your cached data, just dispatch ```resetCachedData(name)``` - function which you can import from the module. Your currently displayed data will not being affected.
+If you want to ***reset your cached data*** for a particular list, just dispatch ```resetCachedData(name)``` with its name as ```name```. Function ```resetCachedData``` can be imported from the module. Your currently displayed data will not being affected.
 
 Well, actually, that's it :) However if you are curious, there is always something more
 
