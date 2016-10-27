@@ -131,7 +131,7 @@ var paginate = function paginate(name, fetch, page, entries, entriesRange, dispa
       data: encode ? encode(data) : data,
       response: response
     };
-  }, function (error) {
+  }).catch(function (error) {
     throw new Error(error);
   }) : Promise.resolve({ data: decode ? decode(data) : _lodash2.default.flatten(data) });
 };
@@ -147,14 +147,14 @@ var mapStateToPropsCreator = function mapStateToPropsCreator(_ref5, mapStateToPr
   };
 };
 
-var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6) {
+var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6, mapDispatchTopProps) {
   var name = _ref6.name;
   var entriesRange = _ref6.entriesRange;
   var action = _ref6.action;
   var responseAccess = _ref6.responseAccess;
   var encode = _ref6.encode;
   var decode = _ref6.decode;
-  return function (dispatch) {
+  return function (dispatch, props) {
     var promise = function promise(_ref7) {
       var page = _ref7.page;
       var entries = _ref7.entries;
@@ -166,7 +166,7 @@ var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6) {
       };
     };
 
-    return {
+    return _extends({
       dispatch: dispatch,
       onPageChange: function onPageChange(cachedData, statePage, stateEntries) {
         return function (_ref8) {
@@ -175,7 +175,7 @@ var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6) {
           return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData })));
         };
       }
-    };
+    }, mapDispatchTopProps(dispatch, props));
   };
 };
 
@@ -198,7 +198,7 @@ var mergeProps = function mergeProps(_ref9, _ref10, ownProps) {
   }, restDispatchProps);
 };
 
-var reduxPagination = exports.reduxPagination = function reduxPagination(_ref11, mapStateToProps) {
+var reduxPagination = exports.reduxPagination = function reduxPagination(_ref11, mapStateToProps, mapDispatchTopProps) {
   var name = _ref11.name;
   var entriesRange = _ref11.entriesRange;
   var responseAccess = _ref11.responseAccess;
@@ -206,6 +206,6 @@ var reduxPagination = exports.reduxPagination = function reduxPagination(_ref11,
   var decode = _ref11.decode;
   var action = _ref11.action;
   return function (Comp) {
-    return (0, _reactRedux.connect)(mapStateToPropsCreator({ name: name }, mapStateToProps), mapDispatchToPropsCreator({ name: name, entriesRange: entriesRange, action: action, responseAccess: responseAccess, encode: encode, decode: decode }), mergeProps)(Comp);
+    return (0, _reactRedux.connect)(mapStateToPropsCreator({ name: name }, mapStateToProps), mapDispatchToPropsCreator({ name: name, entriesRange: entriesRange, action: action, responseAccess: responseAccess, encode: encode, decode: decode }, mapDispatchTopProps), mergeProps)(Comp);
   };
 };

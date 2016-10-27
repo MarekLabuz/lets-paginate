@@ -123,7 +123,8 @@ const paginate = (
             data: encode ? encode(data) : data,
             response,
           }
-        }, error => {
+        })
+        .catch(error => {
           throw new Error(error)
         })
     :
@@ -146,14 +147,15 @@ const mapDispatchToPropsCreator = ({
   responseAccess,
   encode,
   decode
-}) => (dispatch) => {
+}, mapDispatchTopProps) => (dispatch, props) => {
   const promise = ({ page, entries, entriesRange, cachedData }) => (fetch = Promise.resolve({ data: [] })) =>
     paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode)
 
   return {
     dispatch,
     onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries }) =>
-      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData })))
+      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }))),
+    ...mapDispatchTopProps(dispatch, props)
   }
 }
 
@@ -171,10 +173,18 @@ const mergeProps = (
 })
 
 export const reduxPagination = ({
-  name, entriesRange, responseAccess, encode, decode, action }, mapStateToProps
+  name,
+  entriesRange,
+  responseAccess,
+  encode,
+  decode,
+  action
+},
+  mapStateToProps,
+  mapDispatchTopProps,
 ) => (Comp) =>
   connect(
     mapStateToPropsCreator({ name }, mapStateToProps),
-    mapDispatchToPropsCreator({ name, entriesRange, action, responseAccess, encode, decode }),
+    mapDispatchToPropsCreator({ name, entriesRange, action, responseAccess, encode, decode }, mapDispatchTopProps),
     mergeProps
   )(Comp)
