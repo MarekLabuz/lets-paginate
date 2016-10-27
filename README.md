@@ -43,7 +43,6 @@ A few new props are passed to your React component:
 - ```page``` as a number of a current page
 - ```entries``` as a number of items displayed on a single page
 - ```onPageChange({ page, entries })``` is a function that takes new ```page``` and ```entries```, so if you want to change a page to 5th just execute ```onPageChange({ page: 5 })```. Changing number of ```entries``` works the same way. **Apart from setting pagination, this function also fetches data** so if you just want to change a pagination, ```dispatch(setPagination({ page, entries })``` is your way to go. ```setPagination``` can be imported from a module. **Please keep in mind that variables ```page``` and ```entries``` are shared between your lists, so you need to reset or initialize them yourself.**
-- ```resetCachedData(name)``` is a function that you ```dispatch``` in order to reset cached data for a list name ```name```. Your currently displayed data is not being affected.
 
 ```action``` from above is a function that takes a function which returs promise as an argument, let me explain it to you :)
 
@@ -72,6 +71,8 @@ reduxPagination({
 ```responseAccess``` is an function that returns an object consisting of ```data```.
 
 I've wrote ```({ data: response.data.array })``` just as an example
+
+If you want to reset your cached data, just dispatch ```resetCachedData(name)``` - function which you can import from the module. Your currently displayed data will not being affected.
 
 Well, actually, that's it :) However if you are curious, there is always something more
 
