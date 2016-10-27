@@ -1,7 +1,7 @@
 # lets-paginate
 
 **What does it do?**
-It provides a set of tools so that you wouldn't bother about paginating and caching you data in a react/redux application.
+It provides a set of tools so that you wouldn't bother about paginating and caching your data in a react/redux application.
 
 **How does it work?**
 It just stores your cached data in a redux store in small chunks, so it can be easily accessed later.
