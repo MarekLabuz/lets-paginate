@@ -136,7 +136,7 @@ const mapStateToPropsCreator = ({ name }, mapStateToProps) => (state, props) => 
     cachedData: state.pagination.cachedData[name] || {},
     page: state.pagination.page,
     entries: state.pagination.entries,
-    ...mapStateToProps(state, props)
+    ...(mapStateToProps ? mapStateToProps(state, props) : {})
   }
 }
 
@@ -155,7 +155,7 @@ const mapDispatchToPropsCreator = ({
     dispatch,
     onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries }) =>
       dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }))),
-    ...mapDispatchTopProps(dispatch, props)
+    ...(mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {})
   }
 }
 
