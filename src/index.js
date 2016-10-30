@@ -105,26 +105,42 @@ function reducer() {
   }
 }
 
+var anyNextPageExistsThatIsNull = function anyNextPageExistsThatIsNull(cachedData, end) {
+  return _lodash2.default.some(Object.keys(cachedData), function (key) {
+    return JSON.parse(key)[0] >= end && cachedData[key] === null;
+  });
+};
+
 var paginate = function paginate(name, fetch, page, entries, entriesRange, dispatch, cachedData, responseAccess, encode, decode) {
   dispatch(setPagination({ page: page, entries: entries }));
   var step = calcStep(entriesRange);
   var start = (page - 1) * entries;
   var end = page * entries;
+  var desiredLength = entries / step;
 
   var data = _lodash2.default.range(0, (end - start) / step).reduce(function (acc, curr) {
     var dataOptional = cachedData['[' + (start + curr * step) + ', ' + (start + curr * step + step) + ']'];
     return [].concat(_toConsumableArray(acc), [dataOptional]);
   }, []).filter(function (item) {
-    return !!item;
+    return item !== undefined;
   });
 
-  return data.length < entries / step ? fetch().then(function (response) {
+  return data.length < desiredLength || _lodash2.default.every(data, function (item) {
+    return item === null;
+  }) || _lodash2.default.some(data, function (item) {
+    return item === null;
+  }) && anyNextPageExistsThatIsNull(cachedData, end) ? fetch({ page: page, entries: entries }).then(function (response) {
     var _ref4 = responseAccess ? responseAccess(response) : response;
 
     var data = _ref4.data;
 
-    var cachedData = _extends({}, cachedData, _lodash2.default.chunk(data, step).reduce(function (acc, curr, index) {
-      return _extends({}, acc, _defineProperty({}, '[' + (start + index * step) + ', ' + (start + index * step + step) + ']', encode ? encode(curr) : curr));
+    var chunksOptional = _lodash2.default.chunk(data, step);
+    var difference = desiredLength - chunksOptional.length;
+    var chunks = difference > 0 ? chunksOptional.concat(_lodash2.default.times(difference, function () {
+      return null;
+    })) : chunksOptional;
+    var cachedData = _extends({}, cachedData, chunks.reduce(function (acc, curr, index) {
+      return _extends({}, acc, _defineProperty({}, '[' + (start + index * step) + ', ' + (start + index * step + step) + ']', encode && curr ? encode(curr) : curr));
     }, []));
     dispatch(setCachedData(name, cachedData));
     return {
@@ -133,7 +149,12 @@ var paginate = function paginate(name, fetch, page, entries, entriesRange, dispa
     };
   }).catch(function (error) {
     throw new Error(error);
-  }) : Promise.resolve({ data: decode ? decode(data) : _lodash2.default.flatten(data) });
+  }) : Promise.resolve({ data: decode ? decode(data.filter(function (item) {
+      return !!item;
+    })) : _lodash2.default.flatten(data.filter(function (item) {
+      return !!item;
+    }))
+  });
 };
 
 var mapStateToPropsCreator = function mapStateToPropsCreator(_ref5, mapStateToProps) {
@@ -172,7 +193,8 @@ var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6, mapDis
         return function (_ref8) {
           var page = _ref8.page;
           var entries = _ref8.entries;
-          return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData })));
+          var params = _ref8.params;
+          return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData }), params));
         };
       }
     }, mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {});

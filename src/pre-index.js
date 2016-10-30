@@ -81,6 +81,10 @@ export function reducer (state = initialState, action) {
   }
 }
 
+const anyNextPageExistsThatIsNull = (cachedData, end) => {
+  return _.some(Object.keys(cachedData), key => (JSON.parse(key)[0] >= end && cachedData[key] === null))
+}
+
 const paginate = (
   name,
   fetch,
@@ -97,6 +101,7 @@ const paginate = (
   const step = calcStep(entriesRange)
   const start = (page - 1) * entries
   const end = page * entries
+  const desiredLength = (entries / step)
 
   const data = _.range(0, (end - start) / step).reduce((acc, curr) => {
     const dataOptional = cachedData[`[${start + (curr * step)}, ${start + (curr * step) + step}]`]
@@ -104,18 +109,21 @@ const paginate = (
       ...acc,
       dataOptional
     ]
-  }, []).filter(item => !!item)
+  }, []).filter(item => item !== undefined)
 
-  return data.length < (entries / step)
+  return data.length < desiredLength || _.every(data, item => item === null) || _.some(data, item => item === null) && anyNextPageExistsThatIsNull(cachedData, end)
     ?
-      fetch()
+      fetch({ page, entries })
         .then(response => {
           const { data } = responseAccess ? responseAccess(response) : response
+          const chunksOptional = _.chunk(data, step)
+          const difference = desiredLength - chunksOptional.length
+          const chunks = difference > 0 ? chunksOptional.concat(_.times(difference, () => null)) : chunksOptional
           const cachedData = {
             ...cachedData,
-            ..._.chunk(data, step).reduce((acc, curr, index) => ({
+            ...chunks.reduce((acc, curr, index) => ({
               ...acc,
-              [`[${start + (index * step)}, ${start + (index * step) + step}]`]: encode ? encode(curr) : curr
+              [`[${start + (index * step)}, ${start + (index * step) + step}]`]: encode && curr ? encode(curr) : curr
             }), [])
           }
           dispatch(setCachedData(name, cachedData))
@@ -128,7 +136,10 @@ const paginate = (
           throw new Error(error)
         })
     :
-      Promise.resolve({ data: decode ? decode(data) : _.flatten(data) })
+      Promise.resolve({ data: decode
+        ? decode(data.filter(item => !!item))
+        : _.flatten(data.filter(item => !!item))
+      })
 }
 
 const mapStateToPropsCreator = ({ name }, mapStateToProps) => (state, props) => {
@@ -153,8 +164,8 @@ const mapDispatchToPropsCreator = ({
 
   return {
     dispatch,
-    onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries }) =>
-      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }))),
+    onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries, params }) =>
+      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }), params)),
     ...(mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {})
   }
 }
