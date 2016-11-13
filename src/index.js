@@ -194,7 +194,10 @@ var mapDispatchToPropsCreator = function mapDispatchToPropsCreator(_ref6, mapDis
           var page = _ref8.page;
           var entries = _ref8.entries;
           var params = _ref8.params;
-          return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData }), params));
+          return dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange: entriesRange, cachedData: cachedData }), _extends({
+            entries: entries,
+            page: page
+          }, params)));
         };
       }
     }, mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {});

@@ -165,7 +165,11 @@ const mapDispatchToPropsCreator = ({
   return {
     dispatch,
     onPageChange: (cachedData, statePage, stateEntries,) => ({ page, entries, params }) =>
-      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }), params)),
+      dispatch(action(promise({ page: page || statePage, entries: entries || stateEntries, entriesRange, cachedData }), {
+        entries,
+        page,
+        ...params,
+      })),
     ...(mapDispatchTopProps ? mapDispatchTopProps(dispatch, props) : {})
   }
 }
