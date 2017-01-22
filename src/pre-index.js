@@ -37,11 +37,12 @@ function setCachedData (name, cachedData) {
   }
 }
 
-export function resetCachedData (name) {
+export function resetCachedData (name, reload) {
   return {
     type: RESET_CACHED_DATA,
     payload: {
-      name
+      name,
+      reload
     }
   }
 }
