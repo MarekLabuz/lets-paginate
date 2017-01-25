@@ -38,10 +38,9 @@ const getOrFetch = ({ page, entries }) => {
       }, {})
 }
 
-const d1 = { '10-15': [1, 2, 3, 4, 5] }
-const d2 = { '25-35': [6, 7, 8, 9, 10] }
-
-const mergeKeys = (key1, value1, key2, value2) => {
+const mergeKeys = (obj1, obj2) => {
+  const [key1, key2] = [Object.keys(obj1)[0], Object.keys(obj2)[0]]
+  const [value1, value2] = [obj1[key1] || [], obj2[key2] || []]
   const [from1, to1] = key1.split('-').map(v => parseInt(v, 10))
   const [from2, to2] = key2.split('-').map(v => parseInt(v, 10))
 
@@ -51,15 +50,18 @@ const mergeKeys = (key1, value1, key2, value2) => {
     case 'left':
     case 'over':
       return {
-        [`${Math.min(from1, from2)}-${Math.max(to1, to2)}`]: [
-          ...value2.slice(0, Math.max(from1 - from2, 0)),
-          ...value1,
-          ...value2.slice((to1 - from2) + 1)
-        ]
+        data: {
+          [`${Math.min(from1, from2)}-${Math.max(to1, to2)}`]: [
+            ...value2.slice(0, Math.max(from1 - from2, 0)),
+            ...value1,
+            ...value2.slice((to1 - from2) + 1)
+          ]
+        },
+        merged: true
       }
     case 'out':
     default:
-      return { [key1]: value1, [key2]: value2 }
+      return { data: obj2, merged: false }
   }
 }
 
@@ -70,26 +72,36 @@ const mergeKeys = (key1, value1, key2, value2) => {
 //   [41, 42, 43, 44, 45]
 // ))
 
-const merge = () => {
-  const d1Keys = Object.keys(d1)
-  const d2Keys = Object.keys(d2)
+const d = {
+  '10-15': [10, 11, 12, 13, 14, 15],
+  '25-35': [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
+}
 
-  return _
-    .chain(d1)
+const obj = {
+  '15-24': [50, 60, 70, 80, 90, 100, 110, 120]
+}
+
+const merge = (cachedData, newObj) => {
+  const result = _
+    .chain(cachedData)
     .keys()
-    .reduce((acc, curr) => {
-      const [from, to] = curr.split('-')
-      return _
-        .chain(d2)
-        .keys()
-        .reduce((acc2, curr2) => {
-          const [from2, to2] = curr2.split('-')
-
-        }, {})
-        .value()
-    }, d2)
+    .reduce((acc, key) => {
+      const { data, merged } = mergeKeys(newObj, { [key]: cachedData[key] })
+      return {
+        data: {
+          ...acc.data,
+          ...data
+        },
+        merged: acc.merged || merged
+      }
+    }, { data: {}, merged: false })
     .value()
+
+  return {
+    ...result.data,
+    ...(!result.merged ? newObj : {})
+  }
 }
 
 getOrFetch({ page: 7, entries: 5 })
-// console.log(merge())
+console.log(merge(d, obj))
