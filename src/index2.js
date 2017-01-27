@@ -1,9 +1,61 @@
 import _ from 'lodash'
+import { connect } from 'react-redux'
 
-const serverData = _.range(0, 1000).map(id => ({ id }))
-const storeData = {}
+const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
+const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
+const FETCH_LOCK = 'lets-paginate/FETCH_LOCK'
 
-const fetch = ({ page, entries }) => Promise.resolve(serverData.slice((page - 1) * entries, page * entries))
+const setCachedData = (name, cachedData) => ({
+  type: SET_CACHED_DATA,
+  payload: {
+    name,
+    cachedData
+  }
+})
+
+const setPagination = ({ page, entries }) => ({
+  type: SET_PAGINATION,
+  payload: {
+    page,
+    entries
+  }
+})
+
+const setFetchLock = () => ({
+  type: FETCH_LOCK
+})
+
+const initialState = {
+  cachedData: {},
+  fetchLock: true
+}
+
+export const reducer = (state = initialState, action) => {
+  switch (action.type) {
+    case SET_CACHED_DATA:
+      return {
+        ...state,
+        cachedData: {
+          ...state.cachedData,
+          [action.payload.name]: action.payload.cachedData
+        }
+      }
+    case SET_PAGINATION:
+      return {
+        ...state,
+        page: action.payload.page || state.page,
+        entries: action.payload.entries || state.entries,
+        fetchLock: false
+      }
+    case FETCH_LOCK:
+      return {
+        ...state,
+        fetchLock: true
+      }
+    default:
+      return state
+  }
+}
 
 const rangePosition = ([b1, b2], [g1, g2]) => (
   (b1 >= g1 && b2 <= g2 && 'in') ||
@@ -12,31 +64,6 @@ const rangePosition = ([b1, b2], [g1, g2]) => (
   (b1 <= g1 && b2 >= g2 && 'over') ||
   ((b1 >= g2 || b2 <= g1) && 'out')
 )
-
-const getOrFetch = ({ page, entries }) => {
-  const [reqFrom, reqTo] = [(page - 1) * entries, (page * entries) - 1]
-  const dataFound = _
-    .chain(storeData)
-    .keys()
-    .reduce((data, key) => {
-      const [from, to] = key.split('-').map(str => parseInt(str, 10))
-      return (
-        data ||
-        (
-          rangePosition([reqFrom, reqTo], [from, to]) === 'in'
-            ? storeData[key].slice(reqFrom - from, (reqTo - from) + 1)
-            : undefined
-        )
-      )
-    }, undefined)
-    .value()
-
-  return dataFound
-    ? Promise.resolve(dataFound)
-    : new Promise((resolve) => {
-        resolve(fetch({ page, entries }))
-      }, {})
-}
 
 const mergeKeys = (obj1, obj2) => {
   const [key1, key2] = [Object.keys(obj1)[0], Object.keys(obj2)[0]]
@@ -61,24 +88,8 @@ const mergeKeys = (obj1, obj2) => {
       }
     case 'out':
     default:
-      return { data: obj2, merged: false }
+      return { data: obj1, merged: false }
   }
-}
-
-// console.log(mergeKeys(
-//   '35-40',
-//   [35, 36, 37, 38, 39, 40],
-//   '41-45',
-//   [41, 42, 43, 44, 45]
-// ))
-
-const d = {
-  '10-15': [10, 11, 12, 13, 14, 15],
-  '25-35': [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
-}
-
-const obj = {
-  '15-24': [50, 60, 70, 80, 90, 100, 110, 120]
 }
 
 const merge = (cachedData, newObj) => {
@@ -86,22 +97,73 @@ const merge = (cachedData, newObj) => {
     .chain(cachedData)
     .keys()
     .reduce((acc, key) => {
-      const { data, merged } = mergeKeys(newObj, { [key]: cachedData[key] })
+      const { data, merged } = mergeKeys(acc.merged, { [key]: cachedData[key] })
       return {
-        data: {
-          ...acc.data,
-          ...data
+        rest: {
+          ...acc.rest,
+          ...(!merged ? { [key]: cachedData[key] } : {})
         },
-        merged: acc.merged || merged
+        merged: data
       }
-    }, { data: {}, merged: false })
+    }, { rest: {}, merged: newObj })
     .value()
 
   return {
-    ...result.data,
-    ...(!result.merged ? newObj : {})
+    ...result.rest,
+    ...result.merged
   }
 }
 
-getOrFetch({ page: 7, entries: 5 })
-console.log(merge(d, obj))
+const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries, fetchLock }) => {
+  if (!page || !entries) {
+    return undefined
+  }
+  const [reqFrom, reqTo] = [(page - 1) * entries, (page * entries) - 1]
+  const dataFound = _
+    .chain(cachedData)
+    .keys()
+    .reduce((data, key) => {
+      const [from, to] = key.split('-').map(str => parseInt(str, 10))
+      return (
+        data ||
+        (
+          rangePosition([reqFrom, reqTo], [from, to]) === 'in'
+            ? cachedData[key].slice(reqFrom - from, (reqTo - from) + 1)
+            : undefined
+        )
+      )
+    }, undefined)
+    .value()
+
+  if (!dataFound && !fetchLock) {
+    dispatch(setFetchLock())
+    dispatch(fetch({ page, entries }))
+      .then((data) => {
+        dispatch(setCachedData(
+          name,
+          merge(cachedData, { [`${reqFrom}-${reqTo}`]: !!data && Array.isArray(data) ? data : [] })
+        ))
+      })
+  }
+
+  return dataFound
+}
+
+export const reduxPagination = ({ name, fetch }) => Component => connect(
+  state => ({
+    data: state.pagination.cachedData[name] || {},
+    page: state.pagination.page,
+    entries: state.pagination.entries,
+    fetchLock: state.pagination.fetchLock
+  }),
+  dispatch => ({
+    getData: (...params) => getDataFromCache(dispatch, fetch, name)(...params),
+    onPageChange: ({ page, entries }) => dispatch(setPagination({ page, entries }))
+  }),
+  ({ data, page, entries, fetchLock }, { getData, onPageChange }) => ({
+    data: getData(data, { page, entries, fetchLock }),
+    page,
+    entries,
+    onPageChange
+  })
+)(Component)
