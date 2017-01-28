@@ -1,6 +1,45 @@
 import _ from 'lodash'
 import { connect } from 'react-redux'
 
+const SET_BUFFER_CONTENT = 'SET_BUFFER_CONTENT'
+const CLEAR_BUFFER = 'CLEAR_BUFFER'
+
+const setBufferContent = (name, content) => ({
+  type: SET_BUFFER_CONTENT,
+  payload: {
+    name,
+    content
+  }
+})
+
+const clearBuffer = name => ({
+  type: CLEAR_BUFFER,
+  payload: {
+    name
+  }
+})
+
+let buffer = {}
+
+const reducerBuffer = (state = {}, action) => {
+  switch (action.type) {
+    case SET_BUFFER_CONTENT:
+      return {
+        ...state,
+        [action.payload.name]: action.payload.content
+      }
+    case CLEAR_BUFFER:
+      return _.omit(state, [action.payload.name])
+    default:
+      return state
+  }
+}
+
+const dispatchBuffer = (action) => {
+  buffer = reducerBuffer(buffer, action)
+  return buffer
+}
+
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
 const FETCH_LOCK = 'lets-paginate/FETCH_LOCK'
@@ -13,21 +52,23 @@ const setCachedData = (name, cachedData) => ({
   }
 })
 
-const setPagination = ({ page, entries }) => ({
+const setPagination = ({ page, entries }, name) => ({
   type: SET_PAGINATION,
   payload: {
+    name,
     page,
     entries
   }
 })
 
-const setFetchLock = () => ({
-  type: FETCH_LOCK
+const setFetchLock = name => ({
+  type: FETCH_LOCK,
+  payload: {
+    name
+  }
 })
 
 const initialState = {
-  cachedData: {},
-  fetchLock: true
 }
 
 export const reducer = (state = initialState, action) => {
@@ -35,22 +76,39 @@ export const reducer = (state = initialState, action) => {
     case SET_CACHED_DATA:
       return {
         ...state,
-        cachedData: {
-          ...state.cachedData,
-          [action.payload.name]: action.payload.cachedData
+        [action.payload.name]: {
+          ...state[action.payload.name],
+          cachedData: action.payload.cachedData
         }
       }
     case SET_PAGINATION:
       return {
         ...state,
-        page: action.payload.page || state.page,
-        entries: action.payload.entries || state.entries,
-        fetchLock: false
+        [action.payload.name]: {
+          ...state[action.payload.name],
+          ...(
+            !action.payload.page && !action.payload.entires
+              ?
+                {
+                  page: undefined,
+                  entries: undefined
+                }
+              :
+                {
+                  page: action.payload.page || (state[action.payload.name] || {}).page,
+                  entries: action.payload.entries || (state[action.payload.name] || {}).entries,
+                }
+          ),
+          fetchLock: false
+        }
       }
     case FETCH_LOCK:
       return {
         ...state,
-        fetchLock: true
+        [action.payload.name]: {
+          ...state[action.payload.name],
+          fetchLock: true
+        }
       }
     default:
       return state
@@ -114,30 +172,38 @@ const merge = (cachedData, newObj) => {
   }
 }
 
+const getAllCachedData = (cachedData) => {
+  return cachedData
+}
+
 const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries, fetchLock }) => {
-  if (!page || !entries) {
-    return undefined
-  }
-  const [reqFrom, reqTo] = [(page - 1) * entries, (page * entries) - 1]
-  const dataFound = _
-    .chain(cachedData)
-    .keys()
-    .reduce((data, key) => {
-      const [from, to] = key.split('-').map(str => parseInt(str, 10))
-      return (
-        data ||
-        (
-          rangePosition([reqFrom, reqTo], [from, to]) === 'in'
-            ? cachedData[key].slice(reqFrom - from, (reqTo - from) + 1)
-            : undefined
+  const getAll = (!!page || !!entries)
+  const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
+  const dataFound = getAll
+    ? getAllCachedData(cachedData)
+    : _
+      .chain(cachedData)
+      .keys()
+      .reduce((data, key) => {
+        const [from, to] = key.split('-').map(str => parseInt(str, 10))
+        return (
+          data ||
+          (
+            rangePosition([reqFrom, reqTo], [from, to]) === 'in'
+              ? cachedData[key].slice(reqFrom - from, (reqTo - from) + 1)
+              : undefined
+          )
         )
-      )
-    }, undefined)
-    .value()
+      }, undefined)
+      .value()
 
   if (!dataFound && !fetchLock) {
-    dispatch(setFetchLock())
-    dispatch(fetch({ page, entries }))
+    dispatch(setFetchLock(name))
+    dispatch(fetch({ page, entries }, (() => {
+      const bufferName = buffer[name]
+      dispatchBuffer(clearBuffer(name))
+      return bufferName
+    })()))
       .then((data) => {
         dispatch(setCachedData(
           name,
@@ -150,15 +216,21 @@ const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries
 }
 
 export const reduxPagination = ({ name, fetch }) => Component => connect(
-  state => ({
-    data: state.pagination.cachedData[name] || {},
-    page: state.pagination.page,
-    entries: state.pagination.entries,
-    fetchLock: state.pagination.fetchLock
-  }),
+  (state) => {
+    const nameState = (state.pagination[name] || {})
+    return {
+      data: nameState.cachedData,
+      page: nameState.page,
+      entries: nameState.entries,
+      fetchLock: nameState.fetchLock
+    }
+  },
   dispatch => ({
     getData: (...params) => getDataFromCache(dispatch, fetch, name)(...params),
-    onPageChange: ({ page, entries }) => dispatch(setPagination({ page, entries }))
+    onPageChange: (pagination, options) => {
+      dispatchBuffer(setBufferContent(name, options))
+      dispatch(setPagination({ ...pagination }, name))
+    }
   }),
   ({ data, page, entries, fetchLock }, { getData, onPageChange }) => ({
     data: getData(data, { page, entries, fetchLock }),
