@@ -1,54 +1,17 @@
 import _ from 'lodash'
 import { connect } from 'react-redux'
 
-const SET_BUFFER_CONTENT = 'SET_BUFFER_CONTENT'
-const CLEAR_BUFFER = 'CLEAR_BUFFER'
-
-const setBufferContent = (name, content) => ({
-  type: SET_BUFFER_CONTENT,
-  payload: {
-    name,
-    content
-  }
-})
-
-const clearBuffer = name => ({
-  type: CLEAR_BUFFER,
-  payload: {
-    name
-  }
-})
-
-let buffer = {}
-
-const reducerBuffer = (state = {}, action) => {
-  switch (action.type) {
-    case SET_BUFFER_CONTENT:
-      return {
-        ...state,
-        [action.payload.name]: action.payload.content
-      }
-    case CLEAR_BUFFER:
-      return _.omit(state, [action.payload.name])
-    default:
-      return state
-  }
-}
-
-const dispatchBuffer = (action) => {
-  buffer = reducerBuffer(buffer, action)
-  return buffer
-}
-
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
 const FETCH_LOCK = 'lets-paginate/FETCH_LOCK'
 
-const setCachedData = (name, cachedData) => ({
+const setCachedData = (name, cachedData, isAllData, type) => ({
   type: SET_CACHED_DATA,
   payload: {
     name,
-    cachedData
+    cachedData,
+    isAllData,
+    type
   }
 })
 
@@ -58,13 +21,6 @@ const setPagination = ({ page, entries }, name) => ({
     name,
     page,
     entries
-  }
-})
-
-const setFetchLock = name => ({
-  type: FETCH_LOCK,
-  payload: {
-    name
   }
 })
 
@@ -78,7 +34,9 @@ export const reducer = (state = initialState, action) => {
         ...state,
         [action.payload.name]: {
           ...state[action.payload.name],
-          cachedData: action.payload.cachedData
+          cachedData: action.payload.cachedData,
+          isAllData: action.payload.isAllData,
+          type: action.payload.type
         }
       }
     case SET_PAGINATION:
@@ -86,19 +44,8 @@ export const reducer = (state = initialState, action) => {
         ...state,
         [action.payload.name]: {
           ...state[action.payload.name],
-          ...(
-            !action.payload.page && !action.payload.entires
-              ?
-                {
-                  page: undefined,
-                  entries: undefined
-                }
-              :
-                {
-                  page: action.payload.page || (state[action.payload.name] || {}).page,
-                  entries: action.payload.entries || (state[action.payload.name] || {}).entries,
-                }
-          ),
+          page: action.payload.page,
+          entries: action.payload.entries,
           fetchLock: false
         }
       }
@@ -173,11 +120,24 @@ const merge = (cachedData, newObj) => {
 }
 
 const getAllCachedData = (cachedData) => {
-  return cachedData
+  if (cachedData.hasOwnProperty('u-u')) { // eslint-disable-line
+    return cachedData['u-u']
+  }
+
+  const dataFound = _
+    .chain(cachedData)
+    .keys()
+    .sort()
+    .reduce((acc, key) => [...acc, ...cachedData[key]], [])
+    .value()
+
+  return dataFound.length
+    ? dataFound
+    : undefined
 }
 
-const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries, fetchLock }) => {
-  const getAll = (!!page || !!entries)
+const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
+  const getAll = (type !== 'array' && !!type) || !page || !entries
   const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
   const dataFound = getAll
     ? getAllCachedData(cachedData)
@@ -189,7 +149,7 @@ const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries
         return (
           data ||
           (
-            rangePosition([reqFrom, reqTo], [from, to]) === 'in'
+            isAllData || rangePosition([reqFrom, reqTo], [from, to]) === 'in'
               ? cachedData[key].slice(reqFrom - from, (reqTo - from) + 1)
               : undefined
           )
@@ -197,45 +157,79 @@ const getDataFromCache = (dispatch, fetch, name) => (cachedData, { page, entries
       }, undefined)
       .value()
 
-  if (!dataFound && !fetchLock) {
-    dispatch(setFetchLock(name))
-    dispatch(fetch({ page, entries }, (() => {
-      const bufferName = buffer[name]
-      dispatchBuffer(clearBuffer(name))
-      return bufferName
-    })()))
-      .then((data) => {
-        dispatch(setCachedData(
-          name,
-          merge(cachedData, { [`${reqFrom}-${reqTo}`]: !!data && Array.isArray(data) ? data : [] })
-        ))
-      })
-  }
 
-  return dataFound
+  return { dataFound, reqFrom, reqTo }
 }
 
-export const reduxPagination = ({ name, fetch }) => Component => connect(
+const onPageChangeCore = (
+  name,
+  dispatch,
+  cachedData,
+  fetch,
+  isAllData,
+  type,
+  statePage,
+  stateEntries,
+  allDataExpected
+) => ({ page: newPage, entries: newEntries }, ...options) => {
+  const { page, entries } = !newPage && !newEntries
+    ?
+      {
+        page: undefined,
+        entries: undefined
+      }
+    :
+      {
+        page: newPage || statePage,
+        entries: newEntries || stateEntries,
+      }
+  dispatch(setPagination({ page, entries }, name))
+
+  const { dataFound, reqFrom, reqTo } = getDataFromCache(cachedData, { page, entries, isAllData, type })
+
+  if (!dataFound && !isAllData) {
+    dispatch(fetch({ page, entries }, ...options))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const probableReqTo = ((reqFrom || 0) + (data.length - 1))
+          dispatch(setCachedData(
+            name,
+            merge(
+              cachedData,
+              {
+                [`${reqFrom || 0}-${allDataExpected ? probableReqTo : reqTo}`]:
+                  !!data && Array.isArray(data) ? data : []
+              }
+            ),
+            allDataExpected,
+            'array'
+          ))
+        } else {
+          dispatch(setCachedData(name, { 'u-u': data }, true, typeof data))
+        }
+      })
+  }
+}
+
+export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Component => connect(
   (state) => {
     const nameState = (state.pagination[name] || {})
     return {
-      data: nameState.cachedData,
+      data: nameState.cachedData || {},
       page: nameState.page,
       entries: nameState.entries,
-      fetchLock: nameState.fetchLock
+      isAllData: nameState.isAllData,
+      type: nameState.type
     }
   },
   dispatch => ({
-    getData: (...params) => getDataFromCache(dispatch, fetch, name)(...params),
-    onPageChange: (pagination, options) => {
-      dispatchBuffer(setBufferContent(name, options))
-      dispatch(setPagination({ ...pagination }, name))
-    }
+    getData: (...params) => getDataFromCache(...params).dataFound,
+    onPageChange: (data, isAllData, type, statePage, stateEntries) => onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected)
   }),
-  ({ data, page, entries, fetchLock }, { getData, onPageChange }) => ({
-    data: getData(data, { page, entries, fetchLock }),
+  ({ data, page, entries, isAllData, type }, { getData, onPageChange }) => ({
+    data: getData(data, { page, entries, isAllData, type }),
     page,
     entries,
-    onPageChange
+    onPageChange: onPageChange(data, isAllData, type, page, entries)
   })
 )(Component)
