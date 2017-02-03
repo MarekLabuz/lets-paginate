@@ -1,9 +1,7 @@
-import _ from 'lodash'
 import { connect } from 'react-redux'
 
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
-const FETCH_LOCK = 'lets-paginate/FETCH_LOCK'
 
 const setCachedData = (name, cachedData, isAllData, type) => ({
   type: SET_CACHED_DATA,
@@ -24,10 +22,7 @@ const setPagination = ({ page, entries }, name) => ({
   }
 })
 
-const initialState = {
-}
-
-export const reducer = (state = initialState, action) => {
+export const reducer = (state = {}, action) => {
   switch (action.type) {
     case SET_CACHED_DATA:
       return {
@@ -45,16 +40,7 @@ export const reducer = (state = initialState, action) => {
         [action.payload.name]: {
           ...state[action.payload.name],
           page: action.payload.page,
-          entries: action.payload.entries,
-          fetchLock: false
-        }
-      }
-    case FETCH_LOCK:
-      return {
-        ...state,
-        [action.payload.name]: {
-          ...state[action.payload.name],
-          fetchLock: true
+          entries: action.payload.entries
         }
       }
     default:
@@ -62,7 +48,7 @@ export const reducer = (state = initialState, action) => {
   }
 }
 
-const rangePosition = ([b1, b2], [g1, g2]) => (
+export const rangePosition = ([b1, b2], [g1, g2]) => (
   (b1 >= g1 && b2 <= g2 && 'in') ||
   (b1 >= g1 && b1 <= g2 + 1 && b2 >= g2 && 'right') ||
   (b1 <= g1 && b2 >= g1 - 1 && b2 <= g2 && 'left') ||
@@ -70,7 +56,7 @@ const rangePosition = ([b1, b2], [g1, g2]) => (
   ((b1 >= g2 || b2 <= g1) && 'out')
 )
 
-const mergeKeys = (obj1, obj2) => {
+export const mergeKeys = (obj1, obj2) => {
   const [key1, key2] = [Object.keys(obj1)[0], Object.keys(obj2)[0]]
   const [value1, value2] = [obj1[key1] || [], obj2[key2] || []]
   const [from1, to1] = key1.split('-').map(v => parseInt(v, 10))
@@ -98,9 +84,7 @@ const mergeKeys = (obj1, obj2) => {
 }
 
 const merge = (cachedData, newObj) => {
-  const result = _
-    .chain(cachedData)
-    .keys()
+  const result = Object.keys(cachedData)
     .reduce((acc, key) => {
       const { data, merged } = mergeKeys(acc.merged, { [key]: cachedData[key] })
       return {
@@ -111,7 +95,6 @@ const merge = (cachedData, newObj) => {
         merged: data
       }
     }, { rest: {}, merged: newObj })
-    .value()
 
   return {
     ...result.rest,
@@ -124,12 +107,9 @@ const getAllCachedData = (cachedData) => {
     return cachedData['u-u']
   }
 
-  const dataFound = _
-    .chain(cachedData)
-    .keys()
+  const dataFound = Object.keys(cachedData)
     .sort()
     .reduce((acc, key) => [...acc, ...cachedData[key]], [])
-    .value()
 
   return dataFound.length
     ? dataFound
@@ -141,9 +121,7 @@ const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
   const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
   const dataFound = getAll
     ? getAllCachedData(cachedData)
-    : _
-      .chain(cachedData)
-      .keys()
+    : Object.keys(cachedData)
       .reduce((data, key) => {
         const [from, to] = key.split('-').map(str => parseInt(str, 10))
         return (
@@ -155,8 +133,6 @@ const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
           )
         )
       }, undefined)
-      .value()
-
 
   return { dataFound, reqFrom, reqTo }
 }
@@ -224,7 +200,8 @@ export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Com
   },
   dispatch => ({
     getData: (...params) => getDataFromCache(...params).dataFound,
-    onPageChange: (data, isAllData, type, statePage, stateEntries) => onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected)
+    onPageChange: (data, isAllData, type, statePage, stateEntries) =>
+      onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected)
   }),
   ({ data, page, entries, isAllData, type }, { getData, onPageChange }) => ({
     data: getData(data, { page, entries, isAllData, type }),
