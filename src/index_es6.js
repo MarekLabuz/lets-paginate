@@ -83,7 +83,7 @@ export const mergeKeys = (obj1, obj2) => {
   }
 }
 
-const merge = (cachedData, newObj) => {
+export const merge = (cachedData, newObj) => {
   const result = Object.keys(cachedData)
     .reduce((acc, key) => {
       const { data, merged } = mergeKeys(acc.merged, { [key]: cachedData[key] })
@@ -102,7 +102,7 @@ const merge = (cachedData, newObj) => {
   }
 }
 
-const getAllCachedData = (cachedData) => {
+export const getAllCachedData = (cachedData) => {
   if (cachedData.hasOwnProperty('u-u')) { // eslint-disable-line
     return cachedData['u-u']
   }
@@ -116,7 +116,7 @@ const getAllCachedData = (cachedData) => {
     : undefined
 }
 
-const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
+export const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
   const getAll = (type !== 'array' && !!type) || !page || !entries
   const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
   const dataFound = getAll
@@ -135,6 +135,14 @@ const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
       }, undefined)
 
   return { dataFound, reqFrom, reqTo }
+}
+
+export const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPageChange) => relativeIndex => {
+
+}
+
+export const onAddItemCore = (name, dispatch, data) => (index, item) => {
+
 }
 
 const onPageChangeCore = (
@@ -159,7 +167,10 @@ const onPageChangeCore = (
         page: newPage || statePage,
         entries: newEntries || stateEntries,
       }
-  dispatch(setPagination({ page, entries }, name))
+
+  if (statePage !== page || stateEntries !== entries) {
+    dispatch(setPagination({ page, entries }, name))
+  }
 
   const { dataFound, reqFrom, reqTo } = getDataFromCache(cachedData, { page, entries, isAllData, type })
 
@@ -201,12 +212,16 @@ export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Com
   dispatch => ({
     getData: (...params) => getDataFromCache(...params).dataFound,
     onPageChange: (data, isAllData, type, statePage, stateEntries) =>
-      onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected)
+      onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected),
+    onAddItem: data => onAddItemCore(name, dispatch, data),
+    onRemoveItem: (data, pagination, onPageChange) => onRemoveItemCore(name, dispatch, data, pagination, onPageChange)
   }),
-  ({ data, page, entries, isAllData, type }, { getData, onPageChange }) => ({
+  ({ data, page, entries, isAllData, type }, { getData, onPageChange, onAddItem, onRemoveItem }) => ({
     data: getData(data, { page, entries, isAllData, type }),
     page,
     entries,
-    onPageChange: onPageChange(data, isAllData, type, page, entries)
+    onPageChange: onPageChange(data, isAllData, type, page, entries),
+    onAddItem: onAddItem(data),
+    onRemoveItem: onRemoveItem(data, { page, entries }, () => onPageChange(data, isAllData, type, page, entries))
   })
 )(Component)

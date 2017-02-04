@@ -5,8 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "test": "jest --watch",
-    "start": "nodemon --exec babel-node -- src/index2.js",
-    "build": "babel src/index2.js --out-file src/index3.js --watch"
+    "start": "nodemon --exec babel-node -- src/index_es6.js",
+    "build": "babel src/index_es6.js --out-file src/index.js --watch"
   },
   "repository": {
     "type": "git",
