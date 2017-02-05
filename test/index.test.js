@@ -162,6 +162,13 @@ describe('getAllCachedData', () => {
     )
   })
 
+  test('returns collected data', () => {
+    testGetAllCachedData(
+      { '16-19': [16, 17, 18, 19], '2-4': [2, 3, 4] },
+      [2, 3, 4, 16, 17, 18, 19]
+    )
+  })
+
   test('returns correct data when key is "u-u"', () => {
     testGetAllCachedData(
       { 'u-u': { a: 1, b: 2, c: 3 } },
@@ -237,10 +244,35 @@ describe('insertItemIntoData', () => {
     expect(JSON.stringify((result))).toBe(JSON.stringify(expectedObj))
   }
 
-  test('returns correct object with last index provided explicitly', () => {
+  test('returns correct object', () => {
     testInsertItemIntoData(
-      { '2-4': [2, 3, 4] }, 5, 5,
-      { '2-5': [2, 3, 4, 5] }
+      { '2-4': [2, 3, 4] }, 33, 3,
+      { '2-5': [2, 33, 3, 4] }
+    )
+
+    testInsertItemIntoData(
+      { '0-5': [0, 1, 2, 3, 4, 5] }, 10, 0,
+      { '0-6': [10, 0, 1, 2, 3, 4, 5] }
+    )
+
+    testInsertItemIntoData(
+      { '2-4': [2, 3, 4] }, 55, 5,
+      { '2-5': [2, 3, 4, 55] }
+    )
+
+    testInsertItemIntoData(
+      { '2-4': [2, 3, 4] }, 100, 10,
+      { '2-4': [2, 3, 4], '10-10': [100] }
+    )
+
+    testInsertItemIntoData(
+      { '2-6': [2, 3, 4, 5, 6], '8-12': [8, 9, 10, 11, 12] }, 44, 4,
+      { '2-7': [2, 3, 44, 4, 5, 6], '9-13': [8, 9, 10, 11, 12] }
+    )
+
+    testInsertItemIntoData(
+      { '2-6': [2, 3, 4, 5, 6], '8-12': [8, 9, 10, 11, 12], '14-15': [14, 15] }, 100, 10,
+      { '2-6': [2, 3, 4, 5, 6], '8-13': [8, 9, 100, 10, 11, 12], '15-16': [14, 15] }
     )
   })
 })

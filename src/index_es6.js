@@ -108,7 +108,7 @@ export const getAllCachedData = (cachedData) => {
   }
 
   const dataFound = Object.keys(cachedData)
-    .sort()
+    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
     .reduce((acc, key) => [...acc, ...cachedData[key]], [])
 
   return dataFound.length
@@ -147,13 +147,39 @@ export const getMaxIndex = data => parseInt(
     : Object.keys(data).sort((a, b) => parseInt(b, 10) - parseInt(a, 10))[0].split('-')[1], 10
 )
 
-export const insertItemIntoData = (data, item, index) => {
+export const insertItemIntoData = (cachedData, item, index) => {
+  const { data, found } = Object.keys(cachedData)
+    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+    .reduce((acc, key) => {
+      const [from, to] = key.split('-').map(str => parseInt(str, 10))
+      return (
+        (
+          rangePosition([index, index], [from, to]) !== 'out' &&
+          {
+            data: {
+              ...acc.data,
+              [`${from}-${to + 1}`]: [
+                ...cachedData[key].slice(0, index - from),
+                item,
+                ...cachedData[key].slice(index - from)
+              ]
+            },
+            found: true
+          }
+        ) ||
+        (acc.found && { data: { ...acc.data, [`${from + 1}-${to + 1}`]: cachedData[key] }, found: true }) ||
+        ({ data: { ...acc.data, [key]: cachedData[key] }, found: false })
+      )
+    }, { data: {}, found: false })
 
+  return {
+    ...data,
+    ...(found ? {} : { [`${index}-${index}`]: [item] })
+  }
 }
 
-export const onAddItemCore = (name, dispatch, data) => (item, index) => {
-  const iTemp = index === undefined ? 0 : index
-  const i = iTemp === -1 ? getMaxIndex(data) : iTemp
+export const onAddItemCore = (name, dispatch, data) => (item, index = 0) => {
+  const i = index === -1 ? getMaxIndex(data) + 1 : index
 
 }
 
