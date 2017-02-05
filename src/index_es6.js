@@ -141,7 +141,19 @@ export const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPage
 
 }
 
-export const onAddItemCore = (name, dispatch, data) => (index, item) => {
+export const getMaxIndex = data => parseInt(
+  Object.keys(data).length === 0
+    ? 0
+    : Object.keys(data).sort((a, b) => parseInt(b, 10) - parseInt(a, 10))[0].split('-')[1], 10
+)
+
+export const insertItemIntoData = (data, item, index) => {
+
+}
+
+export const onAddItemCore = (name, dispatch, data) => (item, index) => {
+  const iTemp = index === undefined ? 0 : index
+  const i = iTemp === -1 ? getMaxIndex(data) : iTemp
 
 }
 

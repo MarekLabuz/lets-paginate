@@ -1,4 +1,12 @@
-import { rangePosition, mergeKeys, merge, getAllCachedData, getDataFromCache } from '../src/index_es6'
+import {
+  rangePosition,
+  mergeKeys,
+  merge,
+  getAllCachedData,
+  getDataFromCache,
+  getMaxIndex,
+  insertItemIntoData
+} from '../src/index_es6'
 
 describe('rangePosition', () => {
   const testRangePosition = (range1, range2, expectedString) => {
@@ -205,6 +213,34 @@ describe('getDataFromCache', () => {
       { 'u-u': { a: 1, b: 2, c: 3 } },
       { type: 'object' },
       { dataFound: { a: 1, b: 2, c: 3 } }
+    )
+  })
+})
+
+describe('getMaxIndex', () => {
+  const testGetMaxIndex = (data, expected) => {
+    const result = getMaxIndex(data)
+    expect(result).toBe(expected)
+  }
+
+  test('returns highest index in cachedData', () => {
+    testGetMaxIndex({ '2-6': [] }, 6)
+    testGetMaxIndex({ '2-6': [], '7-9': [] }, 9)
+    testGetMaxIndex({ '11-18': [], '2-6': [], '7-9': [] }, 18)
+    testGetMaxIndex({}, 0)
+  })
+})
+
+describe('insertItemIntoData', () => {
+  const testInsertItemIntoData = (data, item, index, expectedObj) => {
+    const result = insertItemIntoData(data, item, index)
+    expect(JSON.stringify((result))).toBe(JSON.stringify(expectedObj))
+  }
+
+  test('returns correct object with last index provided explicitly', () => {
+    testInsertItemIntoData(
+      { '2-4': [2, 3, 4] }, 5, 5,
+      { '2-5': [2, 3, 4, 5] }
     )
   })
 })
