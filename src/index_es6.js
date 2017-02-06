@@ -30,8 +30,8 @@ export const reducer = (state = {}, action) => {
         [action.payload.name]: {
           ...state[action.payload.name],
           cachedData: action.payload.cachedData,
-          isAllData: action.payload.isAllData,
-          type: action.payload.type
+          ...(action.payload.isAllData !== undefined ? { isAllData: action.payload.isAllData } : {}),
+          ...(action.payload.type !== undefined ? { type: action.payload.type } : {})
         }
       }
     case SET_PAGINATION:
@@ -137,6 +137,9 @@ export const getDataFromCache = (cachedData, { page, entries, isAllData, type })
   return { dataFound, reqFrom, reqTo }
 }
 
+export const selector = name => (state, { page, entries }) =>
+  getDataFromCache(state.pagination[name].cachedData, { page, entries })
+
 export const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPageChange) => relativeIndex => {
 
 }
@@ -180,7 +183,7 @@ export const insertItemIntoData = (cachedData, item, index) => {
 
 export const onAddItemCore = (name, dispatch, data) => (item, index = 0) => {
   const i = index === -1 ? getMaxIndex(data) + 1 : index
-
+  dispatch(setCachedData(name, insertItemIntoData(data, item, i)))
 }
 
 const onPageChangeCore = (
@@ -193,7 +196,7 @@ const onPageChangeCore = (
   statePage,
   stateEntries,
   allDataExpected
-) => ({ page: newPage, entries: newEntries }, ...options) => {
+) => ({ page: newPage, entries: newEntries } = {}, ...options) => {
   const { page, entries } = !newPage && !newEntries
     ?
       {
