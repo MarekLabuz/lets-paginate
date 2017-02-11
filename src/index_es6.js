@@ -292,6 +292,6 @@ export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Com
     onAddItem: onAddItem(data),
     onRemoveItem: onRemoveItem(data, { page, entries }, newData =>
       onPageChange(newData, isAllData, type, page, entries)),
-    reset
+    reset: () => reset(name)
   })
 )(Component)
