@@ -6,10 +6,11 @@
 It provides a set of tools so that you wouldn't bother about paginating and caching you data in a react/redux application.
 
 **How does it work?**
-It just stores your cached data in a redux store in small chunks, so it can be easily accessed later.
+It just stores your cached data in a redux store in chunks, so it can be easily accessed.
 
 **How can I make it work?**
-You need to import a reducer included in a package and add it to your main reducer:
+
+First step: You need to import a reducer included in a package and add it to your main reducer:
 
 ```js
 import { reducer } from 'lets-paginate'
@@ -21,86 +22,41 @@ const reducers = {
 // ...
 combineReducers(reducers)
 ```
-We're almost done :)
-The rest depends on the way you access data from your source.
 
-Simplest implementation:
+Second step: Import ```reduxPagination``` wrapper and attach it to your component. There are two configuration option you have to provide: ```name``` is an unique name for your data, ```fetch``` is a function where you fetch new data from an external source.
+
 ```js
-reduxPagination({
+import { reduxPagination } from 'lets-paginate'
+// ...
+export default reduxPagination({
   name: 'users',
-  entriesRange: [10, 25, 50],
-  action: getUsers
-}, mapStateToProps, mapDispatchToProps)(UsersList)
+  fetch: getUsers
+})(Users)
 ```
-```reduxPagination``` returns a React component and it works the same way ```connect``` in react-redux works, so you don't have to import ```connect``` additionally.
 
-- ```name``` is an unique identifier for a list
-- ```entriesRange``` is an array where you define possible counts of items on a single page
-- ```action``` is a function, but we will get back to it later
-- ```mapStateToProps``` and ```mapDispatchToProps``` are functions as you would normally pass to a react-redux ```connect```
-
-A few new props are passed to your React component:
-- ```page``` as a number of a current page
-- ```entries``` as a number of items displayed on a single page
-- ```onPageChange({ page, entries })``` is a function that takes new ```page``` and ```entries```, so if you want to change a page to 5th just execute ```onPageChange({ page: 5 })```. Changing number of ```entries``` works the same way. **Apart from setting pagination, this function also fetches data** so if you just want to change a pagination, ```dispatch(setPagination({ page, entries })``` is your way to go. ```setPagination``` can be imported from a module. **Please keep in mind that variables ```page``` and ```entries``` are shared between your lists, so you need to reset or initialize them yourself.**
-
-```action``` from above is a function that takes a function which returs promise as an argument, let me explain it to you :)
-
-Example:
-```js
-function getUsers (promise) {
-    const fetch = ({ page, entries }) => API.user.get(page, entries)
-    promise(fetch)
-        .then((response) => { /* ... */ })
-        .catch((error) => { /* ... */ })
-}
-```
-```fetch``` is a funtion that takes ```{ page, entries }``` and returns a promise that you would use to access data from your source (in my case it is server API call)
-
-All you need to do is to execute ```promise(fetch)```. In response you will get either a response from a ```fetch``` call or an object ```{ data }``` where ```data``` is a cached data (the latter happens when you revisit an already cached page). You need to take care of a ```data``` in your own way, for instance, why not store it in a redux state? :)
-
-**How do I know how to access API call data?** If your ```fetch``` function returns in response something other than ```response.data``` as an array, you need to tell me. No worries, I've came prepared :)
+Third step: Implement function ```fetch```. Example below:
 
 ```js
-reduxPagination({
-    // ...
-    responseAccess: response => ({ data: response.data.array })
-}, mapStateToProps, mapDispatchToProps)(UsersList)
+export const getUsers ({ page, entries }) => dispatch =>
+  API.users.get({ page, entries })
+    .then(response => response.data)
+    .catch(() => [])
 ```
 
-```responseAccess``` is an function that returns an object consisting of ```data```.
+What's crucial is that you have to return a Promise with new data to be stored in redux state
 
-I've wrote ```({ data: response.data.array })``` just as an example
+Fourth step: Enjoy! Below I've desribed all awesome things that you can do with lets-paginate ;)
 
-If you want to **reset your cached data** for a particular list, just dispatch ```resetCachedData(name)``` with its name as ```name```. Function ```resetCachedData``` can be imported from the module. Your currently displayed data will not be affected.
+**API reference:**
 
-Well, actually, that's it :) However if you are curious, there is always something more
-
-**Do you support some fancy data transformations?** I do! :)
-There are two more functions you can add.
-```js
-reduxPagination({
-    // ...
-    encode: chunk => { /* ... */ }
-    decode: array => { /* ... */ }
-}, mapStateToProps, mapDispatchToProps)(UsersList)
-```
-- ```encode``` is a function that takes a ```chunk``` which can be a data (array of items or its part) that is being returned from your source. It simply tells that you want to store your data in the other way than a simple array of items.
-- ```decode``` is a function that takes an array which is an array of items that ```encode``` returned. Here you can convert it into something more accessible. The result will be passed to a ```response``` as a ```data```.
-
-Oh, that sounds complicated, but it is not :) Here's an example:
-
-```js
-const encode = chunk => chunk.reduce((acc, curr) => ({
-    ids: [...acc.ids, curr.id],
-    data: { ...acc.data, [curr.id]: curr }
-  }), { ids: [], data: {} })
-
-const decode = array => array.reduce((acc, curr) => ({
-    ids: [...acc.ids, ...curr.ids],
-    data: { ...acc.data, ...curr.data }
-  }), { ids: [], data: {} })
-```
+When you wrap your React component with ```reduxPagination``` (like the example above), you will gain a few new props:
+- ```data``` is a prop that contains a piece of your cached data basing on values of ```page``` and ```entries```. It takes a  value of undefined when new data is being fetched.
+- ```page``` is a current page
+- ```entries``` is a number of items on a current page
+- ```onPageChange({ page, entries } [, params])``` is a function that sets new values of ```page``` and ```entries``` and updates ```data```. When no data is available with a new values of ```page``` and ```entries``` it automatically dispatches function ```fetch``` (provided in ```reduxPagination```)
+- ```onAddItem(item [, index])``` is a fuction that adds a new element to your cached data at ```index```. Default value of ```index``` is 0. ```onAddItem``` with a value of index equal to -1 adds the item after the last element of cached data.
+- ```onRemoveItem(index)``` is a function that removes element at ```index```
+- ```reset()``` is a function that deletes all cached data
 
 # License
 MIT
