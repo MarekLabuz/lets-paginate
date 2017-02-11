@@ -5,7 +5,9 @@ import {
   getAllCachedData,
   getDataFromCache,
   getMaxIndex,
-  insertItemIntoData
+  insertItemIntoData,
+  removeItemFromData,
+  selector
 } from '../src/index_es6'
 
 describe('rangePosition', () => {
@@ -274,5 +276,66 @@ describe('insertItemIntoData', () => {
       { '2-6': [2, 3, 4, 5, 6], '8-12': [8, 9, 10, 11, 12], '14-15': [14, 15] }, 100, 10,
       { '2-6': [2, 3, 4, 5, 6], '8-13': [8, 9, 100, 10, 11, 12], '15-16': [14, 15] }
     )
+
+    testInsertItemIntoData(
+      { '2-6': [2, 3, 4, 5, 6], '8-12': [8, 9, 10, 11, 12], '14-15': [14, 15] }, 7, 7,
+      { '2-7': [2, 3, 4, 5, 6, 7], '9-13': [8, 9, 10, 11, 12], '15-16': [14, 15] }
+    )
+  })
+})
+
+describe('removeItemFromData', () => {
+  const testRemoveItemFromData = (cachedData, index, expectedValue) => {
+    const result = removeItemFromData(cachedData, index)
+    expect(JSON.stringify(result)).toBe(JSON.stringify(expectedValue))
+  }
+
+  test('returns correct object', () => {
+    testRemoveItemFromData({ '1-5': [1, 2, 3, 4, 5] }, 4, { data: { '1-4': [1, 2, 3, 5] }, found: true })
+    testRemoveItemFromData({ '1-5': [1, 2, 3, 4, 5] }, 10, { data: { '1-5': [1, 2, 3, 4, 5] }, found: false })
+    testRemoveItemFromData({ '1-5': [1, 2, 3, 4, 5] }, undefined, { data: { '1-5': [1, 2, 3, 4, 5] }, found: false })
+    testRemoveItemFromData({ '1-5': [1, 2, 3, 4, 5] }, undefined, { data: { '1-5': [1, 2, 3, 4, 5] }, found: false })
+    testRemoveItemFromData(
+      { '1-5': [1, 2, 3, 4, 5], '7-9': [7, 8, 9], '10-12': [10, 11, 12] },
+      8,
+      { data: { '1-5': [1, 2, 3, 4, 5], '7-8': [7, 9], '9-11': [10, 11, 12] }, found: true })
+  })
+})
+
+describe('selector', () => {
+  const testSelector = (state, name, pagination, expectedValue) => {
+    const result = selector(name)(state, pagination)
+    expect(JSON.stringify(result)).toBe(JSON.stringify(expectedValue))
+  }
+
+  const mockState = {
+    pagination: {
+      users: {
+        cachedData: {
+          '2-5': [2, 3, 4, 5],
+          '7-9': [7, 8, 9]
+        }
+      }
+    }
+  }
+
+  test('returns correct value when neither page nor entries were provided', () => {
+    testSelector(mockState, 'users', undefined, [2, 3, 4, 5, 7, 8, 9])
+  })
+
+  test('returns correct value when only page was provided', () => {
+    testSelector(mockState, 'users', { page: 4 }, [2, 3, 4, 5, 7, 8, 9])
+  })
+
+  test('returns correct value when only entries was provided', () => {
+    testSelector(mockState, 'users', { entries: 25 }, [2, 3, 4, 5, 7, 8, 9])
+  })
+
+  test('returns correct value when correct page and entries were provided', () => {
+    testSelector(mockState, 'users', { page: 2, entries: 2 }, [2, 3])
+  })
+
+  test('returns correct value when incorrect page and entries were provided', () => {
+    testSelector(mockState, 'users', { page: 1, entries: 2 }, undefined)
   })
 })

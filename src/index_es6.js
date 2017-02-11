@@ -116,7 +116,7 @@ export const getAllCachedData = (cachedData) => {
     : undefined
 }
 
-export const getDataFromCache = (cachedData, { page, entries, isAllData, type }) => {
+export const getDataFromCache = (cachedData, { page, entries, isAllData, type } = {}) => {
   const getAll = (type !== 'array' && !!type) || !page || !entries
   const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
   const dataFound = getAll
@@ -137,11 +137,38 @@ export const getDataFromCache = (cachedData, { page, entries, isAllData, type })
   return { dataFound, reqFrom, reqTo }
 }
 
-export const selector = name => (state, { page, entries }) =>
-  getDataFromCache(state.pagination[name].cachedData, { page, entries })
+export const selector = name => (state, { page, entries } = {}) =>
+  getDataFromCache(state.pagination[name].cachedData, { page, entries }).dataFound
 
-export const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPageChange) => relativeIndex => {
+export const removeItemFromData = (cachedData, index) => Object.keys(cachedData)
+  .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+  .reduce((acc, key) => {
+    const [from, to] = key.split('-').map(str => parseInt(str, 10))
+    return (
+      (acc.found && { data: { ...acc.data, [`${from - 1}-${to - 1}`]: cachedData[key] }, found: true }) ||
+      (
+        rangePosition([index, index], [from, to]) === 'in' && {
+          data: {
+            ...acc.data,
+            [`${from}-${to - 1}`]: [
+              ...cachedData[key].slice(0, index - from),
+              ...cachedData[key].slice((index - from) + 1)
+            ]
+          },
+          found: true
+        }
+      ) ||
+      ({ data: { ...acc.data, [key]: cachedData[key] }, found: false })
+    )
+  }, { data: {}, found: false })
 
+const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPageChange) => (relativeIndex, ...params) => {
+  const index = (!page && !entries) ? relativeIndex : ((page - 1) * entries) + relativeIndex
+  const { data: newData, found } = removeItemFromData(data, index)
+  if (found) {
+    dispatch(setCachedData(name, newData))
+    onPageChange(newData)({ page, entries }, ...params)
+  }
 }
 
 export const getMaxIndex = data => parseInt(
@@ -156,9 +183,9 @@ export const insertItemIntoData = (cachedData, item, index) => {
     .reduce((acc, key) => {
       const [from, to] = key.split('-').map(str => parseInt(str, 10))
       return (
+        (acc.found && { data: { ...acc.data, [`${from + 1}-${to + 1}`]: cachedData[key] }, found: true }) ||
         (
-          rangePosition([index, index], [from, to]) !== 'out' &&
-          {
+          rangePosition([index, index], [from, to]) !== 'out' && {
             data: {
               ...acc.data,
               [`${from}-${to + 1}`]: [
@@ -170,7 +197,6 @@ export const insertItemIntoData = (cachedData, item, index) => {
             found: true
           }
         ) ||
-        (acc.found && { data: { ...acc.data, [`${from + 1}-${to + 1}`]: cachedData[key] }, found: true }) ||
         ({ data: { ...acc.data, [key]: cachedData[key] }, found: false })
       )
     }, { data: {}, found: false })
@@ -181,7 +207,7 @@ export const insertItemIntoData = (cachedData, item, index) => {
   }
 }
 
-export const onAddItemCore = (name, dispatch, data) => (item, index = 0) => {
+const onAddItemCore = (name, dispatch, data) => (item, index = 0) => {
   const i = index === -1 ? getMaxIndex(data) + 1 : index
   dispatch(setCachedData(name, insertItemIntoData(data, item, i)))
 }
@@ -255,14 +281,17 @@ export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Com
     onPageChange: (data, isAllData, type, statePage, stateEntries) =>
       onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected),
     onAddItem: data => onAddItemCore(name, dispatch, data),
-    onRemoveItem: (data, pagination, onPageChange) => onRemoveItemCore(name, dispatch, data, pagination, onPageChange)
+    onRemoveItem: (data, pagination, onPageChange) => onRemoveItemCore(name, dispatch, data, pagination, onPageChange),
+    reset: n => dispatch(setCachedData(n, {}))
   }),
-  ({ data, page, entries, isAllData, type }, { getData, onPageChange, onAddItem, onRemoveItem }) => ({
+  ({ data, page, entries, isAllData, type }, { getData, onPageChange, onAddItem, onRemoveItem, reset }) => ({
     data: getData(data, { page, entries, isAllData, type }),
     page,
     entries,
     onPageChange: onPageChange(data, isAllData, type, page, entries),
     onAddItem: onAddItem(data),
-    onRemoveItem: onRemoveItem(data, { page, entries }, () => onPageChange(data, isAllData, type, page, entries))
+    onRemoveItem: onRemoveItem(data, { page, entries }, newData =>
+      onPageChange(newData, isAllData, type, page, entries)),
+    reset
   })
 )(Component)
