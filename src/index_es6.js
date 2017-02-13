@@ -265,7 +265,23 @@ const onPageChangeCore = (
   }
 }
 
-export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Component => connect(
+const cap = string => string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
+
+const generateStatePropsByName = (name, state, { }) => {
+  const nameState = (state.pagination[name] || {})
+  return {
+    [`data${cap(name)}`]: nameState.cachedData || {},
+    [`page${cap(name)}`]: nameState.page,
+    [`entries${cap(name)}`]: nameState.entries,
+    [`isAllData${cap(name)}`]: nameState.isAllData,
+    [`type${cap(name)}`]: nameState.type
+  }
+}
+
+const multipleNames = (Component, { name, fetch, allDataExpected }) => connect(
+)
+
+const singleName = (Component, { name, fetch, allDataExpected }) => connect(
   (state) => {
     const nameState = (state.pagination[name] || {})
     return {
@@ -295,3 +311,10 @@ export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Com
     reset: () => reset(name)
   })
 )(Component)
+
+export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Component => (
+  (typeof name === 'string' && singleName(Component, { name, fetch, allDataExpected })) ||
+  (Array.isArray(name) && multipleNames(Component, { name, fetch, allDataExpected })) ||
+  Component
+)
+

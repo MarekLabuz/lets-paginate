@@ -298,6 +298,16 @@ var onPageChangeCore = function onPageChangeCore(name, dispatch, cachedData, fet
   };
 };
 
+var capitalize = function capitalize(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+};
+
+console.log(capitalize('rfere'));
+
+// const generateStatePropsByName = (name, { }) => ({
+//   `data`
+// })
+
 var reduxPagination = exports.reduxPagination = function reduxPagination(_ref16) {
   var name = _ref16.name,
       fetch = _ref16.fetch,
@@ -341,7 +351,7 @@ var reduxPagination = exports.reduxPagination = function reduxPagination(_ref16)
           onPageChange = _ref18.onPageChange,
           onAddItem = _ref18.onAddItem,
           onRemoveItem = _ref18.onRemoveItem,
-          reset = _ref18.reset;
+          _reset = _ref18.reset;
       return {
         data: getData(data, { page: page, entries: entries, isAllData: isAllData, type: type }),
         page: page,
@@ -351,7 +361,9 @@ var reduxPagination = exports.reduxPagination = function reduxPagination(_ref16)
         onRemoveItem: onRemoveItem(data, { page: page, entries: entries }, function (newData) {
           return onPageChange(newData, isAllData, type, page, entries);
         }),
-        reset: reset
+        reset: function reset() {
+          return _reset(name);
+        }
       };
     })(Component);
   };
