@@ -2,6 +2,49 @@ import { connect } from 'react-redux'
 
 const SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA'
 const SET_PAGINATION = 'lets-paginate/SET_PAGINATION'
+const RESET_CACHED_DATA = 'lets-paginate/RESET_CACHED_DATA'
+const PAGE_CHANGE = 'lets-paginate/PAGE_CHANGE'
+const ADD_ITEM = 'lets-paginate/ADD_ITEM'
+const REMOVE_ITEM = 'lets-paginate/REMOVE_ITEM'
+
+const addItem = (name, item, index) => ({
+  type: ADD_ITEM,
+  payload: {
+    name,
+    item,
+    index
+  }
+})
+
+const removeItem = (name, relativeIndex, options, { fetch, allDataExpected }) => ({
+  type: REMOVE_ITEM,
+  payload: {
+    name,
+    relativeIndex,
+    options,
+    fetch: fetch || (() => Promise.resolve([])),
+    allDataExpected: allDataExpected || false,
+  }
+})
+
+const pageChange = (name, { page, entries, fetch, allDataExpected }, options) => ({
+  type: PAGE_CHANGE,
+  payload: {
+    name,
+    page,
+    entries,
+    fetch: fetch || (() => Promise.resolve([])),
+    allDataExpected: allDataExpected || false,
+    options
+  }
+})
+
+const resetCachedData = name => ({
+  type: RESET_CACHED_DATA,
+  payload: {
+    name
+  }
+})
 
 const setCachedData = (name, cachedData, isAllData, type) => ({
   type: SET_CACHED_DATA,
@@ -13,7 +56,7 @@ const setCachedData = (name, cachedData, isAllData, type) => ({
   }
 })
 
-const setPagination = ({ page, entries }, name) => ({
+const setPagination = (name, { page, entries }) => ({
   type: SET_PAGINATION,
   payload: {
     name,
@@ -41,6 +84,14 @@ export const reducer = (state = {}, action) => {
           ...state[action.payload.name],
           page: action.payload.page,
           entries: action.payload.entries
+        }
+      }
+    case RESET_CACHED_DATA:
+      return {
+        ...state,
+        [action.payload.name]: {
+          ...state[action.payload.name],
+          cachedData: {},
         }
       }
     default:
@@ -116,9 +167,11 @@ export const getAllCachedData = (cachedData) => {
     : undefined
 }
 
-export const getDataFromCache = (cachedData, { page, entries, isAllData, type } = {}) => {
+export const getDataFromCache = ({ cachedData = {}, page, entries, type, isAllData }) => {
   const getAll = (type !== 'array' && !!type) || !page || !entries
-  const [reqFrom, reqTo] = getAll ? [] : [(page - 1) * entries, (page * entries) - 1]
+  const [reqFrom, reqTo] = getAll
+    ? []
+    : [(page - 1) * entries, (page * entries) - 1]
   const dataFound = getAll
     ? getAllCachedData(cachedData)
     : Object.keys(cachedData)
@@ -138,7 +191,7 @@ export const getDataFromCache = (cachedData, { page, entries, isAllData, type } 
 }
 
 export const selector = name => (state, { page, entries } = {}) =>
-  getDataFromCache(state.pagination[name].cachedData, { page, entries }).dataFound
+  getDataFromCache({ cachedData: state.pagination[name].cachedData, page, entries }).dataFound
 
 export const removeItemFromData = (cachedData, index) => Object.keys(cachedData)
   .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
@@ -161,15 +214,6 @@ export const removeItemFromData = (cachedData, index) => Object.keys(cachedData)
       ({ data: { ...acc.data, [key]: cachedData[key] }, found: false })
     )
   }, { data: {}, found: false })
-
-const onRemoveItemCore = (name, dispatch, data, { page, entries }, onPageChange) => (relativeIndex, ...params) => {
-  const index = (!page && !entries) ? relativeIndex : ((page - 1) * entries) + relativeIndex
-  const { data: newData, found } = removeItemFromData(data, index)
-  if (found) {
-    dispatch(setCachedData(name, newData))
-    onPageChange(newData)({ page, entries }, ...params)
-  }
-}
 
 export const getMaxIndex = data => parseInt(
   Object.keys(data).length === 0
@@ -207,22 +251,8 @@ export const insertItemIntoData = (cachedData, item, index) => {
   }
 }
 
-const onAddItemCore = (name, dispatch, data) => (item, index = 0) => {
-  const i = index === -1 ? getMaxIndex(data) + 1 : index
-  dispatch(setCachedData(name, insertItemIntoData(data, item, i)))
-}
-
-const onPageChangeCore = (
-  name,
-  dispatch,
-  cachedData,
-  fetch,
-  isAllData,
-  type,
-  statePage,
-  stateEntries,
-  allDataExpected
-) => ({ page: newPage, entries: newEntries } = {}, ...options) => {
+const onPageChange = ({ name, store, next, fetch, allDataExpected }, { page: newPage, entries: newEntries, options }) => {
+  const state1 = store.getState().pagination[name] || {}
   const { page, entries } = !newPage && !newEntries
     ?
       {
@@ -231,90 +261,91 @@ const onPageChangeCore = (
       }
     :
       {
-        page: newPage || statePage,
-        entries: newEntries || stateEntries,
+        page: newPage || state1.page,
+        entries: newEntries || state1.entries,
       }
 
-  if (statePage !== page || stateEntries !== entries) {
-    dispatch(setPagination({ page, entries }, name))
+  if (state1.page !== page || state1.entries !== entries) {
+    next(setPagination(name, { page, entries }))
   }
 
-  const { dataFound, reqFrom, reqTo } = getDataFromCache(cachedData, { page, entries, isAllData, type })
+  const state2 = store.getState().pagination[name]
 
-  if (!dataFound && !isAllData) {
-    dispatch(fetch({ page, entries }, ...options))
+  const { dataFound, reqFrom, reqTo } = getDataFromCache(state2)
+
+  if (!dataFound && !state2.isAllData) {
+    next(fetch({ page, entries }, ...options))
       .then((data) => {
+        const state3 = store.getState().pagination[name]
         if (Array.isArray(data)) {
           const probableReqTo = ((reqFrom || 0) + (data.length - 1))
-          dispatch(setCachedData(
+          next(setCachedData(
             name,
-            merge(
-              cachedData,
-              {
-                [`${reqFrom || 0}-${allDataExpected ? probableReqTo : reqTo}`]:
-                  !!data && Array.isArray(data) ? data : []
-              }
-            ),
+            merge(state3.cachedData || {}, {
+              [`${reqFrom || 0}-${allDataExpected ? probableReqTo : reqTo}`]: !!data && Array.isArray(data)
+                ? data
+                : []
+            }),
             allDataExpected,
             'array'
           ))
         } else {
-          dispatch(setCachedData(name, { 'u-u': data }, true, typeof data))
+          next(setCachedData(name, { 'u-u': data }, true, typeof data))
         }
       })
   }
 }
 
-const cap = string => string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
 
-const generateStatePropsByName = (name, state, { }) => {
-  const nameState = (state.pagination[name] || {})
-  return {
-    [`data${cap(name)}`]: nameState.cachedData || {},
-    [`page${cap(name)}`]: nameState.page,
-    [`entries${cap(name)}`]: nameState.entries,
-    [`isAllData${cap(name)}`]: nameState.isAllData,
-    [`type${cap(name)}`]: nameState.type
+export const middleware = store => next => (action) => {
+  if (action.type === PAGE_CHANGE) {
+    const { name, page, entries, fetch, allDataExpected, options } = action.payload
+    onPageChange({ name, store, next, fetch, allDataExpected }, { page, entries, options })
+  } else if (action.type === ADD_ITEM) {
+    const { name, item, index } = action.payload
+    const { cachedData } = store.getState().pagination[name] || {}
+    const i = index === -1 ? getMaxIndex(cachedData || {}) + 1 : index
+    next(setCachedData(name, insertItemIntoData(cachedData || {}, item, i)))
+  } else if (action.type === REMOVE_ITEM) {
+    const { name, relativeIndex, options, fetch, allDataExpected } = action.payload
+    const { cachedData, page, entries } = store.getState().pagination[name] || {}
+    const index = (!page && !entries)
+      ? relativeIndex
+      : ((page - 1) * entries) + relativeIndex
+    const { data: newData, found } = removeItemFromData(cachedData || {}, index)
+    if (found) {
+      next(setCachedData(name, newData))
+      onPageChange({ name, store, next, fetch, allDataExpected }, { page, entries, options })
+    }
   }
+  return next(action)
 }
 
-const multipleNames = (Component, { name, fetch, allDataExpected }) => connect(
-)
+const cap = string => string.charAt(0).toUpperCase() + string.slice(1)
 
-const singleName = (Component, { name, fetch, allDataExpected }) => connect(
-  (state) => {
-    const nameState = (state.pagination[name] || {})
-    return {
-      data: nameState.cachedData || {},
-      page: nameState.page,
-      entries: nameState.entries,
-      isAllData: nameState.isAllData,
-      type: nameState.type
-    }
-  },
-  dispatch => ({
-    getData: (...params) => getDataFromCache(...params).dataFound,
-    onPageChange: (data, isAllData, type, statePage, stateEntries) =>
-      onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected),
-    onAddItem: data => onAddItemCore(name, dispatch, data),
-    onRemoveItem: (data, pagination, onPageChange) => onRemoveItemCore(name, dispatch, data, pagination, onPageChange),
-    reset: n => dispatch(setCachedData(n, {}))
-  }),
-  ({ data, page, entries, isAllData, type }, { getData, onPageChange, onAddItem, onRemoveItem, reset }) => ({
-    data: getData(data, { page, entries, isAllData, type }),
-    page,
-    entries,
-    onPageChange: onPageChange(data, isAllData, type, page, entries),
-    onAddItem: onAddItem(data),
-    onRemoveItem: onRemoveItem(data, { page, entries }, newData =>
-      onPageChange(newData, isAllData, type, page, entries)),
-    reset: () => reset(name)
-  })
+const mapStateToProps = (state, { names }) => names.reduce((acc, name) => {
+  const nameState = state.pagination[name] || {}
+  const capName = cap(name)
+
+  return {
+    ...acc,
+    [`data${capName}`]: getDataFromCache(nameState).dataFound,
+    [`page${capName}`]: nameState.page,
+    [`entries${capName}`]: nameState.entries
+  }
+}, {})
+
+const mapDispatchToProps = (dispatch, { names, fetch, allDataExpected }) => names.reduce((acc, name, i) => ({
+  ...acc,
+  [`onPageChange${cap(name)}`]: ({ page, entries }, ...options) =>
+    dispatch(pageChange(name, { page, entries, fetch: fetch[i], allDataExpected: allDataExpected[i] }, options)),
+  [`onAddItem${cap(name)}`]: (item, index = 0) => dispatch(addItem(name, item, index)),
+  [`onRemoveItem${cap(name)}`]: (relativeIndex, ...options) =>
+    dispatch(removeItem(name, relativeIndex, options, { fetch: fetch[i], allDataExpected: allDataExpected[i] })),
+  [`reset${cap(name)}`]: () => dispatch(resetCachedData(name))
+}), {})
+
+export const reduxPagination = ({ names = [], fetch = [], allDataExpected = [] }) => Component => connect(
+  state => mapStateToProps(state, { names }),
+  dispatch => mapDispatchToProps(dispatch, { names, fetch, allDataExpected })
 )(Component)
-
-export const reduxPagination = ({ name, fetch, allDataExpected = false }) => Component => (
-  (typeof name === 'string' && singleName(Component, { name, fetch, allDataExpected })) ||
-  (Array.isArray(name) && multipleNames(Component, { name, fetch, allDataExpected })) ||
-  Component
-)
-

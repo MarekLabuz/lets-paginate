@@ -181,7 +181,7 @@ describe('getAllCachedData', () => {
 
 describe('getDataFromCache', () => {
   const testGetDataFromCache = (cachedData, params, expected) => {
-    const result = getDataFromCache(cachedData, params)
+    const result = getDataFromCache({ cachedData, ...params })
     expect(JSON.stringify(result)).toBe(JSON.stringify(expected))
   }
 

@@ -14,5 +14,9 @@
     "linebreak-style": 0,
     "max-len": 0
   },
-  "parser": "babel-eslint"
+  "parser": "babel-eslint",
+  "env": {
+    "node": true,
+    "jest": true
+  }
 }

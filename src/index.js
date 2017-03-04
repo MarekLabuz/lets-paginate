@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.reduxPagination = exports.insertItemIntoData = exports.getMaxIndex = exports.removeItemFromData = exports.selector = exports.getDataFromCache = exports.getAllCachedData = exports.merge = exports.mergeKeys = exports.rangePosition = exports.reducer = undefined;
+exports.reduxPagination = exports.middleware = exports.insertItemIntoData = exports.getMaxIndex = exports.removeItemFromData = exports.selector = exports.getDataFromCache = exports.getAllCachedData = exports.merge = exports.mergeKeys = exports.rangePosition = exports.reducer = undefined;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -19,6 +19,67 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 var SET_CACHED_DATA = 'lets-paginate/SET_CACHED_DATA';
 var SET_PAGINATION = 'lets-paginate/SET_PAGINATION';
+var RESET_CACHED_DATA = 'lets-paginate/RESET_CACHED_DATA';
+var PAGE_CHANGE = 'lets-paginate/PAGE_CHANGE';
+var ADD_ITEM = 'lets-paginate/ADD_ITEM';
+var REMOVE_ITEM = 'lets-paginate/REMOVE_ITEM';
+
+var addItem = function addItem(name, item, index) {
+  return {
+    type: ADD_ITEM,
+    payload: {
+      name: name,
+      item: item,
+      index: index
+    }
+  };
+};
+
+var removeItem = function removeItem(name, relativeIndex, options, _ref) {
+  var fetch = _ref.fetch,
+      allDataExpected = _ref.allDataExpected;
+  return {
+    type: REMOVE_ITEM,
+    payload: {
+      name: name,
+      relativeIndex: relativeIndex,
+      options: options,
+      fetch: fetch || function () {
+        return Promise.resolve([]);
+      },
+      allDataExpected: allDataExpected || false
+    }
+  };
+};
+
+var pageChange = function pageChange(name, _ref2, options) {
+  var page = _ref2.page,
+      entries = _ref2.entries,
+      fetch = _ref2.fetch,
+      allDataExpected = _ref2.allDataExpected;
+  return {
+    type: PAGE_CHANGE,
+    payload: {
+      name: name,
+      page: page,
+      entries: entries,
+      fetch: fetch || function () {
+        return Promise.resolve([]);
+      },
+      allDataExpected: allDataExpected || false,
+      options: options
+    }
+  };
+};
+
+var resetCachedData = function resetCachedData(name) {
+  return {
+    type: RESET_CACHED_DATA,
+    payload: {
+      name: name
+    }
+  };
+};
 
 var setCachedData = function setCachedData(name, cachedData, isAllData, type) {
   return {
@@ -32,9 +93,9 @@ var setCachedData = function setCachedData(name, cachedData, isAllData, type) {
   };
 };
 
-var setPagination = function setPagination(_ref, name) {
-  var page = _ref.page,
-      entries = _ref.entries;
+var setPagination = function setPagination(name, _ref3) {
+  var page = _ref3.page,
+      entries = _ref3.entries;
   return {
     type: SET_PAGINATION,
     payload: {
@@ -59,27 +120,31 @@ var reducer = exports.reducer = function reducer() {
         page: action.payload.page,
         entries: action.payload.entries
       })));
+    case RESET_CACHED_DATA:
+      return _extends({}, state, _defineProperty({}, action.payload.name, _extends({}, state[action.payload.name], {
+        cachedData: {}
+      })));
     default:
       return state;
   }
 };
 
-var rangePosition = exports.rangePosition = function rangePosition(_ref2, _ref3) {
-  var _ref5 = _slicedToArray(_ref2, 2),
-      b1 = _ref5[0],
-      b2 = _ref5[1];
+var rangePosition = exports.rangePosition = function rangePosition(_ref4, _ref5) {
+  var _ref7 = _slicedToArray(_ref4, 2),
+      b1 = _ref7[0],
+      b2 = _ref7[1];
 
-  var _ref4 = _slicedToArray(_ref3, 2),
-      g1 = _ref4[0],
-      g2 = _ref4[1];
+  var _ref6 = _slicedToArray(_ref5, 2),
+      g1 = _ref6[0],
+      g2 = _ref6[1];
 
   return b1 >= g1 && b2 <= g2 && 'in' || b1 >= g1 && b1 <= g2 + 1 && b2 >= g2 && 'right' || b1 <= g1 && b2 >= g1 - 1 && b2 <= g2 && 'left' || b1 <= g1 && b2 >= g2 && 'over' || (b1 >= g2 || b2 <= g1) && 'out';
 };
 
 var mergeKeys = exports.mergeKeys = function mergeKeys(obj1, obj2) {
-  var _ref6 = [Object.keys(obj1)[0], Object.keys(obj2)[0]],
-      key1 = _ref6[0],
-      key2 = _ref6[1];
+  var _ref8 = [Object.keys(obj1)[0], Object.keys(obj2)[0]],
+      key1 = _ref8[0],
+      key2 = _ref8[1];
   var value1 = obj1[key1] || [],
       value2 = obj2[key2] || [];
 
@@ -142,19 +207,20 @@ var getAllCachedData = exports.getAllCachedData = function getAllCachedData(cach
   return dataFound.length ? dataFound : undefined;
 };
 
-var getDataFromCache = exports.getDataFromCache = function getDataFromCache(cachedData) {
-  var _ref8 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      page = _ref8.page,
-      entries = _ref8.entries,
-      isAllData = _ref8.isAllData,
-      type = _ref8.type;
+var getDataFromCache = exports.getDataFromCache = function getDataFromCache(_ref10) {
+  var _ref10$cachedData = _ref10.cachedData,
+      cachedData = _ref10$cachedData === undefined ? {} : _ref10$cachedData,
+      page = _ref10.page,
+      entries = _ref10.entries,
+      type = _ref10.type,
+      isAllData = _ref10.isAllData;
 
   var getAll = type !== 'array' && !!type || !page || !entries;
 
-  var _ref9 = getAll ? [] : [(page - 1) * entries, page * entries - 1],
-      _ref10 = _slicedToArray(_ref9, 2),
-      reqFrom = _ref10[0],
-      reqTo = _ref10[1];
+  var _ref11 = getAll ? [] : [(page - 1) * entries, page * entries - 1],
+      _ref12 = _slicedToArray(_ref11, 2),
+      reqFrom = _ref12[0],
+      reqTo = _ref12[1];
 
   var dataFound = getAll ? getAllCachedData(cachedData) : Object.keys(cachedData).reduce(function (data, key) {
     var _key$split$map = key.split('-').map(function (str) {
@@ -172,11 +238,11 @@ var getDataFromCache = exports.getDataFromCache = function getDataFromCache(cach
 
 var selector = exports.selector = function selector(name) {
   return function (state) {
-    var _ref11 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        page = _ref11.page,
-        entries = _ref11.entries;
+    var _ref13 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        page = _ref13.page,
+        entries = _ref13.entries;
 
-    return getDataFromCache(state.pagination[name].cachedData, { page: page, entries: entries }).dataFound;
+    return getDataFromCache({ cachedData: state.pagination[name].cachedData, page: page, entries: entries }).dataFound;
   };
 };
 
@@ -196,27 +262,6 @@ var removeItemFromData = exports.removeItemFromData = function removeItemFromDat
       found: true
     } || { data: _extends({}, acc.data, _defineProperty({}, key, cachedData[key])), found: false };
   }, { data: {}, found: false });
-};
-
-var onRemoveItemCore = function onRemoveItemCore(name, dispatch, data, _ref12, onPageChange) {
-  var page = _ref12.page,
-      entries = _ref12.entries;
-  return function (relativeIndex) {
-    for (var _len = arguments.length, params = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      params[_key - 1] = arguments[_key];
-    }
-
-    var index = !page && !entries ? relativeIndex : (page - 1) * entries + relativeIndex;
-
-    var _removeItemFromData = removeItemFromData(data, index),
-        newData = _removeItemFromData.data,
-        found = _removeItemFromData.found;
-
-    if (found) {
-      dispatch(setCachedData(name, newData));
-      onPageChange(newData).apply(undefined, [{ page: page, entries: entries }].concat(params));
-    }
-  };
 };
 
 var getMaxIndex = exports.getMaxIndex = function getMaxIndex(data) {
@@ -247,124 +292,163 @@ var insertItemIntoData = exports.insertItemIntoData = function insertItemIntoDat
   return _extends({}, data, found ? {} : _defineProperty({}, index + '-' + index, [item]));
 };
 
-var onAddItemCore = function onAddItemCore(name, dispatch, data) {
-  return function (item) {
-    var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+var onPageChange = function onPageChange(_ref15, _ref16) {
+  var name = _ref15.name,
+      store = _ref15.store,
+      next = _ref15.next,
+      fetch = _ref15.fetch,
+      allDataExpected = _ref15.allDataExpected;
+  var newPage = _ref16.page,
+      newEntries = _ref16.entries,
+      options = _ref16.options;
 
-    var i = index === -1 ? getMaxIndex(data) + 1 : index;
-    dispatch(setCachedData(name, insertItemIntoData(data, item, i)));
-  };
+  var state1 = store.getState().pagination[name] || {};
+
+  var _ref17 = !newPage && !newEntries ? {
+    page: undefined,
+    entries: undefined
+  } : {
+    page: newPage || state1.page,
+    entries: newEntries || state1.entries
+  },
+      page = _ref17.page,
+      entries = _ref17.entries;
+
+  if (state1.page !== page || state1.entries !== entries) {
+    next(setPagination(name, { page: page, entries: entries }));
+  }
+
+  var state2 = store.getState().pagination[name];
+
+  var _getDataFromCache = getDataFromCache(state2),
+      dataFound = _getDataFromCache.dataFound,
+      reqFrom = _getDataFromCache.reqFrom,
+      reqTo = _getDataFromCache.reqTo;
+
+  if (!dataFound && !state2.isAllData) {
+    next(fetch.apply(undefined, [{ page: page, entries: entries }].concat(_toConsumableArray(options)))).then(function (data) {
+      var state3 = store.getState().pagination[name];
+      if (Array.isArray(data)) {
+        var probableReqTo = (reqFrom || 0) + (data.length - 1);
+        next(setCachedData(name, merge(state3.cachedData || {}, _defineProperty({}, (reqFrom || 0) + '-' + (allDataExpected ? probableReqTo : reqTo), !!data && Array.isArray(data) ? data : [])), allDataExpected, 'array'));
+      } else {
+        next(setCachedData(name, { 'u-u': data }, true, typeof data === 'undefined' ? 'undefined' : _typeof(data)));
+      }
+    });
+  }
 };
 
-var onPageChangeCore = function onPageChangeCore(name, dispatch, cachedData, fetch, isAllData, type, statePage, stateEntries, allDataExpected) {
-  return function () {
-    for (var _len2 = arguments.length, options = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-      options[_key2 - 1] = arguments[_key2];
-    }
+var middleware = exports.middleware = function middleware(store) {
+  return function (next) {
+    return function (action) {
+      if (action.type === PAGE_CHANGE) {
+        var _action$payload = action.payload,
+            name = _action$payload.name,
+            page = _action$payload.page,
+            entries = _action$payload.entries,
+            fetch = _action$payload.fetch,
+            allDataExpected = _action$payload.allDataExpected,
+            options = _action$payload.options;
 
-    var _ref14 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        newPage = _ref14.page,
-        newEntries = _ref14.entries;
+        onPageChange({ name: name, store: store, next: next, fetch: fetch, allDataExpected: allDataExpected }, { page: page, entries: entries, options: options });
+      } else if (action.type === ADD_ITEM) {
+        var _action$payload2 = action.payload,
+            _name = _action$payload2.name,
+            item = _action$payload2.item,
+            index = _action$payload2.index;
 
-    var _ref15 = !newPage && !newEntries ? {
-      page: undefined,
-      entries: undefined
-    } : {
-      page: newPage || statePage,
-      entries: newEntries || stateEntries
-    },
-        page = _ref15.page,
-        entries = _ref15.entries;
+        var _ref18 = store.getState().pagination[_name] || {},
+            cachedData = _ref18.cachedData;
 
-    if (statePage !== page || stateEntries !== entries) {
-      dispatch(setPagination({ page: page, entries: entries }, name));
-    }
+        var i = index === -1 ? getMaxIndex(cachedData || {}) + 1 : index;
+        next(setCachedData(_name, insertItemIntoData(cachedData || {}, item, i)));
+      } else if (action.type === REMOVE_ITEM) {
+        var _action$payload3 = action.payload,
+            _name2 = _action$payload3.name,
+            relativeIndex = _action$payload3.relativeIndex,
+            _options = _action$payload3.options,
+            _fetch = _action$payload3.fetch,
+            _allDataExpected = _action$payload3.allDataExpected;
 
-    var _getDataFromCache = getDataFromCache(cachedData, { page: page, entries: entries, isAllData: isAllData, type: type }),
-        dataFound = _getDataFromCache.dataFound,
-        reqFrom = _getDataFromCache.reqFrom,
-        reqTo = _getDataFromCache.reqTo;
+        var _ref19 = store.getState().pagination[_name2] || {},
+            _cachedData = _ref19.cachedData,
+            _page = _ref19.page,
+            _entries = _ref19.entries;
 
-    if (!dataFound && !isAllData) {
-      dispatch(fetch.apply(undefined, [{ page: page, entries: entries }].concat(options))).then(function (data) {
-        if (Array.isArray(data)) {
-          var probableReqTo = (reqFrom || 0) + (data.length - 1);
-          dispatch(setCachedData(name, merge(cachedData, _defineProperty({}, (reqFrom || 0) + '-' + (allDataExpected ? probableReqTo : reqTo), !!data && Array.isArray(data) ? data : [])), allDataExpected, 'array'));
-        } else {
-          dispatch(setCachedData(name, { 'u-u': data }, true, typeof data === 'undefined' ? 'undefined' : _typeof(data)));
+        var _index = !_page && !_entries ? relativeIndex : (_page - 1) * _entries + relativeIndex;
+
+        var _removeItemFromData = removeItemFromData(_cachedData || {}, _index),
+            newData = _removeItemFromData.data,
+            found = _removeItemFromData.found;
+
+        if (found) {
+          next(setCachedData(_name2, newData));
+          onPageChange({ name: _name2, store: store, next: next, fetch: _fetch, allDataExpected: _allDataExpected }, { page: _page, entries: _entries, options: _options });
         }
-      });
-    }
+      }
+      return next(action);
+    };
   };
 };
 
-var capitalize = function capitalize(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+var cap = function cap(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
-console.log(capitalize('rfere'));
+var mapStateToProps = function mapStateToProps(state, _ref20) {
+  var names = _ref20.names;
+  return names.reduce(function (acc, name) {
+    var _extends11;
 
-// const generateStatePropsByName = (name, { }) => ({
-//   `data`
-// })
+    var nameState = state.pagination[name] || {};
+    var capName = cap(name);
 
-var reduxPagination = exports.reduxPagination = function reduxPagination(_ref16) {
-  var name = _ref16.name,
-      fetch = _ref16.fetch,
-      _ref16$allDataExpecte = _ref16.allDataExpected,
-      allDataExpected = _ref16$allDataExpecte === undefined ? false : _ref16$allDataExpecte;
+    return _extends({}, acc, (_extends11 = {}, _defineProperty(_extends11, 'data' + capName, getDataFromCache(nameState).dataFound), _defineProperty(_extends11, 'page' + capName, nameState.page), _defineProperty(_extends11, 'entries' + capName, nameState.entries), _extends11));
+  }, {});
+};
+
+var mapDispatchToProps = function mapDispatchToProps(dispatch, _ref21) {
+  var names = _ref21.names,
+      fetch = _ref21.fetch,
+      allDataExpected = _ref21.allDataExpected;
+  return names.reduce(function (acc, name, i) {
+    var _extends12;
+
+    return _extends({}, acc, (_extends12 = {}, _defineProperty(_extends12, 'onPageChange' + cap(name), function undefined(_ref22) {
+      for (var _len = arguments.length, options = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        options[_key - 1] = arguments[_key];
+      }
+
+      var page = _ref22.page,
+          entries = _ref22.entries;
+      return dispatch(pageChange(name, { page: page, entries: entries, fetch: fetch[i], allDataExpected: allDataExpected[i] }, options));
+    }), _defineProperty(_extends12, 'onAddItem' + cap(name), function undefined(item) {
+      var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+      return dispatch(addItem(name, item, index));
+    }), _defineProperty(_extends12, 'onRemoveItem' + cap(name), function undefined(relativeIndex) {
+      for (var _len2 = arguments.length, options = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+        options[_key2 - 1] = arguments[_key2];
+      }
+
+      return dispatch(removeItem(name, relativeIndex, options, { fetch: fetch[i], allDataExpected: allDataExpected[i] }));
+    }), _defineProperty(_extends12, 'reset' + cap(name), function undefined() {
+      return dispatch(resetCachedData(name));
+    }), _extends12));
+  }, {});
+};
+
+var reduxPagination = exports.reduxPagination = function reduxPagination(_ref23) {
+  var _ref23$names = _ref23.names,
+      names = _ref23$names === undefined ? [] : _ref23$names,
+      _ref23$fetch = _ref23.fetch,
+      fetch = _ref23$fetch === undefined ? [] : _ref23$fetch,
+      _ref23$allDataExpecte = _ref23.allDataExpected,
+      allDataExpected = _ref23$allDataExpecte === undefined ? [] : _ref23$allDataExpecte;
   return function (Component) {
     return (0, _reactRedux.connect)(function (state) {
-      var nameState = state.pagination[name] || {};
-      return {
-        data: nameState.cachedData || {},
-        page: nameState.page,
-        entries: nameState.entries,
-        isAllData: nameState.isAllData,
-        type: nameState.type
-      };
+      return mapStateToProps(state, { names: names });
     }, function (dispatch) {
-      return {
-        getData: function getData() {
-          return getDataFromCache.apply(undefined, arguments).dataFound;
-        },
-        onPageChange: function onPageChange(data, isAllData, type, statePage, stateEntries) {
-          return onPageChangeCore(name, dispatch, data, fetch, isAllData, type, statePage, stateEntries, allDataExpected);
-        },
-        onAddItem: function onAddItem(data) {
-          return onAddItemCore(name, dispatch, data);
-        },
-        onRemoveItem: function onRemoveItem(data, pagination, onPageChange) {
-          return onRemoveItemCore(name, dispatch, data, pagination, onPageChange);
-        },
-        reset: function reset(n) {
-          return dispatch(setCachedData(n, {}));
-        }
-      };
-    }, function (_ref17, _ref18) {
-      var data = _ref17.data,
-          page = _ref17.page,
-          entries = _ref17.entries,
-          isAllData = _ref17.isAllData,
-          type = _ref17.type;
-      var getData = _ref18.getData,
-          onPageChange = _ref18.onPageChange,
-          onAddItem = _ref18.onAddItem,
-          onRemoveItem = _ref18.onRemoveItem,
-          _reset = _ref18.reset;
-      return {
-        data: getData(data, { page: page, entries: entries, isAllData: isAllData, type: type }),
-        page: page,
-        entries: entries,
-        onPageChange: onPageChange(data, isAllData, type, page, entries),
-        onAddItem: onAddItem(data),
-        onRemoveItem: onRemoveItem(data, { page: page, entries: entries }, function (newData) {
-          return onPageChange(newData, isAllData, type, page, entries);
-        }),
-        reset: function reset() {
-          return _reset(name);
-        }
-      };
+      return mapDispatchToProps(dispatch, { names: names, fetch: fetch, allDataExpected: allDataExpected });
     })(Component);
   };
 };
