@@ -254,16 +254,8 @@ export const insertItemIntoData = (cachedData, item, index) => {
 const onPageChange = ({ name, store, next, fetch, allDataExpected }, { page: newPage, entries: newEntries, options }) => {
   const state1 = store.getState().pagination[name] || {}
   const { page, entries } = !newPage && !newEntries
-    ?
-      {
-        page: undefined,
-        entries: undefined
-      }
-    :
-      {
-        page: newPage || state1.page,
-        entries: newEntries || state1.entries,
-      }
+    ? { page: undefined, entries: undefined }
+    : { page: newPage || state1.page, entries: newEntries || state1.entries }
 
   if (state1.page !== page || state1.entries !== entries) {
     next(setPagination(name, { page, entries }))
@@ -333,7 +325,7 @@ const mapStateToProps = (state, { names }) => names.reduce((acc, name) => {
     [`page${capName}`]: nameState.page,
     [`entries${capName}`]: nameState.entries
   }
-}, {})
+}, { state })
 
 const mapDispatchToProps = (dispatch, { names, fetch, allDataExpected }) => names.reduce((acc, name, i) => ({
   ...acc,
@@ -343,9 +335,16 @@ const mapDispatchToProps = (dispatch, { names, fetch, allDataExpected }) => name
   [`onRemoveItem${cap(name)}`]: (relativeIndex, ...options) =>
     dispatch(removeItem(name, relativeIndex, options, { fetch: fetch[i], allDataExpected: allDataExpected[i] })),
   [`reset${cap(name)}`]: () => dispatch(resetCachedData(name))
-}), {})
+}), { dispatch })
 
-export const reduxPagination = ({ names = [], fetch = [], allDataExpected = [] }) => Component => connect(
-  state => mapStateToProps(state, { names }),
-  dispatch => mapDispatchToProps(dispatch, { names, fetch, allDataExpected })
-)(Component)
+export const reduxPagination = ({ names = [], fetch = [], allDataExpected = [], mapStateAndDispatchToProps }) =>
+  Component => connect(
+    state => mapStateToProps(state, { names }),
+    dispatch => mapDispatchToProps(dispatch, { names, fetch, allDataExpected }),
+    ({ state, ...restStateProps }, { dispatch, ...restDispatchProps }, ownProps) => ({
+      ...ownProps,
+      ...restStateProps,
+      ...restDispatchProps,
+      ...mapStateAndDispatchToProps(state, dispatch, ownProps)
+    })
+  )(Component)

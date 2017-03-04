@@ -13,6 +13,8 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _reactRedux = require('react-redux');
 
+function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; }
+
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -304,13 +306,7 @@ var onPageChange = function onPageChange(_ref15, _ref16) {
 
   var state1 = store.getState().pagination[name] || {};
 
-  var _ref17 = !newPage && !newEntries ? {
-    page: undefined,
-    entries: undefined
-  } : {
-    page: newPage || state1.page,
-    entries: newEntries || state1.entries
-  },
+  var _ref17 = !newPage && !newEntries ? { page: undefined, entries: undefined } : { page: newPage || state1.page, entries: newEntries || state1.entries },
       page = _ref17.page,
       entries = _ref17.entries;
 
@@ -404,7 +400,7 @@ var mapStateToProps = function mapStateToProps(state, _ref20) {
     var capName = cap(name);
 
     return _extends({}, acc, (_extends11 = {}, _defineProperty(_extends11, 'data' + capName, getDataFromCache(nameState).dataFound), _defineProperty(_extends11, 'page' + capName, nameState.page), _defineProperty(_extends11, 'entries' + capName, nameState.entries), _extends11));
-  }, {});
+  }, { state: state });
 };
 
 var mapDispatchToProps = function mapDispatchToProps(dispatch, _ref21) {
@@ -434,21 +430,31 @@ var mapDispatchToProps = function mapDispatchToProps(dispatch, _ref21) {
     }), _defineProperty(_extends12, 'reset' + cap(name), function undefined() {
       return dispatch(resetCachedData(name));
     }), _extends12));
-  }, {});
+  }, { dispatch: dispatch });
 };
 
-var reduxPagination = exports.reduxPagination = function reduxPagination(_ref23) {
+var reduxPagination = function reduxPagination(_ref23) {
   var _ref23$names = _ref23.names,
       names = _ref23$names === undefined ? [] : _ref23$names,
       _ref23$fetch = _ref23.fetch,
       fetch = _ref23$fetch === undefined ? [] : _ref23$fetch,
       _ref23$allDataExpecte = _ref23.allDataExpected,
-      allDataExpected = _ref23$allDataExpecte === undefined ? [] : _ref23$allDataExpecte;
+      allDataExpected = _ref23$allDataExpecte === undefined ? [] : _ref23$allDataExpecte,
+      mapStateAndDispatchToProps = _ref23.mapStateAndDispatchToProps;
   return function (Component) {
     return (0, _reactRedux.connect)(function (state) {
       return mapStateToProps(state, { names: names });
     }, function (dispatch) {
       return mapDispatchToProps(dispatch, { names: names, fetch: fetch, allDataExpected: allDataExpected });
+    }, function (_ref24, _ref25, ownProps) {
+      var dispatch = _ref25.dispatch,
+          restDispatchProps = _objectWithoutProperties(_ref25, ['dispatch']);
+
+      var state = _ref24.state,
+          restStateProps = _objectWithoutProperties(_ref24, ['state']);
+
+      return _extends({}, ownProps, restStateProps, restDispatchProps, mapStateAndDispatchToProps(state, dispatch, ownProps));
     })(Component);
   };
 };
+exports.reduxPagination = reduxPagination;
