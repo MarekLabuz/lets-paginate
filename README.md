@@ -48,7 +48,7 @@ export default reduxPagination({
 }, mapStateAndDispatchToProps)(Users)
 ```
 
-Third step: Implement function ```fetch```. Example below:
+***Fourth step:*** Implement function ```fetch```. Example below:
 
 ```js
 export const getUsers ({ page, entries }, saveData, options) => dispatch =>
