@@ -70,9 +70,10 @@ When you wrap your React component with ```reduxPagination``` (like the example 
 - ```onRemoveItemUsers(index)``` is a function that removes element at ```index```
 - ```resetUsers()``` is a function that deletes all cached data
 
-Notice that props are generated basing on a name of your list is a camelCase practice. The only requirement is that the length of an each array (```names```, ```fetch``` and ```allDataExpected```) has to be equal. The order in the arrays matters just the same.
+Notice that props are generated basing on a name of your list is a camelCase practice.
 
-You can provide as many ```names``` as you want
+You can provide as many ```names``` as you want. The only requirement is that the length of an each array (```names```, ```fetch``` and ```allDataExpected```) has to be equal. The order in the arrays matters just the same.
+
 ```js
 export default reduxPagination({
   names: ['streets', 'cities', 'countires'],
