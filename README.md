@@ -69,7 +69,7 @@ When you wrap your React component with ```reduxPagination``` (like the example 
 - ```dataUsers``` is a prop that contains a piece of your cached data basing on values of ```page``` and ```entries```. It takes a  value of undefined when new data is being fetched.
 - ```pageUsers``` is a number of current page
 - ```entriesUsers``` is a number of items on a current page
-- ```onPageChangeUsers({ page, entries } [, options])``` is a function that sets new values of ```page``` and ```entries``` and updates ```data```. When you cached data lacks data basing on a new values of ```page``` and ```entries``` it automatically dispatches function ```fetch``` (provided in ```reduxPagination```). Optional param ```options``` will be passed to the ```fetch``` function as the last argument.
+- ```onPageChangeUsers({ page, entries } [, options])``` is a function that sets new values of ```page``` and ```entries``` and updates ```data```. When your cached data lacks data basing on a new values of ```page``` and ```entries``` it automatically dispatches function ```fetch``` (provided in ```reduxPagination```). Optional argument ```options``` will be passed to the ```fetch``` function as the last argument.
 - ```onAddItemUsers(item [, index])``` is a fuction that adds a new element to your cached data at ```index```. Default value of ```index``` is 0. ```onAddItem``` with a value of index equal to -1 adds the item after the last element of cached data.
 - ```onRemoveItemUsers(index)``` is a function that removes element at ```index```
 - ```resetUsers()``` is a function that deletes all cached data
