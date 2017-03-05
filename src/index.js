@@ -439,8 +439,8 @@ var reduxPagination = function reduxPagination(_ref23) {
       _ref23$fetch = _ref23.fetch,
       fetch = _ref23$fetch === undefined ? [] : _ref23$fetch,
       _ref23$allDataExpecte = _ref23.allDataExpected,
-      allDataExpected = _ref23$allDataExpecte === undefined ? [] : _ref23$allDataExpecte,
-      mapStateAndDispatchToProps = _ref23.mapStateAndDispatchToProps;
+      allDataExpected = _ref23$allDataExpecte === undefined ? [] : _ref23$allDataExpecte;
+  var mapStateAndDispatchToProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
   return function (Component) {
     return (0, _reactRedux.connect)(function (state) {
       return mapStateToProps(state, { names: names });

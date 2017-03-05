@@ -337,7 +337,11 @@ const mapDispatchToProps = (dispatch, { names, fetch, allDataExpected }) => name
   [`reset${cap(name)}`]: () => dispatch(resetCachedData(name))
 }), { dispatch })
 
-export const reduxPagination = ({ names = [], fetch = [], allDataExpected = [], mapStateAndDispatchToProps }) =>
+export const reduxPagination = ({
+  names = [],
+  fetch = [],
+  allDataExpected = []
+}, mapStateAndDispatchToProps = () => {}) =>
   Component => connect(
     state => mapStateToProps(state, { names }),
     dispatch => mapDispatchToProps(dispatch, { names, fetch, allDataExpected }),
