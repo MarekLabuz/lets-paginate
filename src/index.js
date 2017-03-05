@@ -322,7 +322,7 @@ var onPageChange = function onPageChange(_ref15, _ref16) {
       reqTo = _getDataFromCache.reqTo;
 
   if (!dataFound && !state2.isAllData) {
-    next(fetch.apply(undefined, [{ page: page, entries: entries }].concat(_toConsumableArray(options)))).then(function (data) {
+    next(fetch.apply(undefined, [{ page: page, entries: entries }, function (data) {
       var state3 = store.getState().pagination[name];
       if (Array.isArray(data)) {
         var probableReqTo = (reqFrom || 0) + (data.length - 1);
@@ -330,7 +330,7 @@ var onPageChange = function onPageChange(_ref15, _ref16) {
       } else {
         next(setCachedData(name, { 'u-u': data }, true, typeof data === 'undefined' ? 'undefined' : _typeof(data)));
       }
-    });
+    }].concat(_toConsumableArray(options))));
   }
 };
 

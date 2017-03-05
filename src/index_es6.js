@@ -266,25 +266,24 @@ const onPageChange = ({ name, store, next, fetch, allDataExpected }, { page: new
   const { dataFound, reqFrom, reqTo } = getDataFromCache(state2)
 
   if (!dataFound && !state2.isAllData) {
-    next(fetch({ page, entries }, ...options))
-      .then((data) => {
-        const state3 = store.getState().pagination[name]
-        if (Array.isArray(data)) {
-          const probableReqTo = ((reqFrom || 0) + (data.length - 1))
-          next(setCachedData(
-            name,
-            merge(state3.cachedData || {}, {
-              [`${reqFrom || 0}-${allDataExpected ? probableReqTo : reqTo}`]: !!data && Array.isArray(data)
-                ? data
-                : []
-            }),
-            allDataExpected,
-            'array'
-          ))
-        } else {
-          next(setCachedData(name, { 'u-u': data }, true, typeof data))
-        }
-      })
+    next(fetch({ page, entries }, (data) => {
+      const state3 = store.getState().pagination[name]
+      if (Array.isArray(data)) {
+        const probableReqTo = ((reqFrom || 0) + (data.length - 1))
+        next(setCachedData(
+          name,
+          merge(state3.cachedData || {}, {
+            [`${reqFrom || 0}-${allDataExpected ? probableReqTo : reqTo}`]: !!data && Array.isArray(data)
+              ? data
+              : []
+          }),
+          allDataExpected,
+          'array'
+        ))
+      } else {
+        next(setCachedData(name, { 'u-u': data }, true, typeof data))
+      }
+    }, ...options))
   }
 }
 
