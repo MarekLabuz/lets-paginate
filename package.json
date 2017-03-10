@@ -1,6 +1,6 @@
 {
   "name": "lets-paginate",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Set of tools that makes react/redux pagination easy",
   "main": "src/index.js",
   "scripts": {
