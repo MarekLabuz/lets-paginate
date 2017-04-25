@@ -96,12 +96,13 @@ You can manually access the data from the store by using a selector:
 ```js
 import { connect } from 'react-redux'
 import { selector } from 'lets-paginate'
-
 // ...
 const usersSelector = selector('users')
-const mapStateToProps = state => {
+const mapStateToProps = (state) => {
   const { page, entries } = state
-  data: usersSelector(state, { page, entries })
+  return {
+    data: usersSelector(state, { page, entries })
+  }
 }
 
 export default connect(mapStateToProps)(Users)
