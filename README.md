@@ -90,5 +90,23 @@ Using the example above you will get many generated props: ```dataStreets```, ``
 
 Using the same name for your list in different components gives you an access to the same list stored in a redux store. It is a way to share data between components.
 
+**Selector**
+You can manually access the data from the store by using a selector:
+```js
+import { connect } from 'react-redux'
+import { selector } from 'lets-paginate'
+
+// ...
+const usersSelector = selector('users')
+const mapStateToProps = state => {
+  const { page, entries } = state
+  data: usersSelector(state, { page, entries })
+}
+
+export default connect(mapStateToProps)(Users)
+```
+- ```selector(name)(state, { page, entries })``` returns a selected piece of the data, if any of the data is missing the function returns _undefined_.
+- ```selector(name)(state)``` returns all the stored data
+
 # License
 MIT
