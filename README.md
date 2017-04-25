@@ -91,6 +91,7 @@ Using the example above you will get many generated props: ```dataStreets```, ``
 Using the same name for your list in different components gives you an access to the same list stored in a redux store. It is a way to share data between components.
 
 **Selector**
+
 You can manually access the data from the store by using a selector:
 ```js
 import { connect } from 'react-redux'
